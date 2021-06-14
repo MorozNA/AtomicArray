@@ -26,11 +26,13 @@ class HexagonModel:
         for _ in range(copies):
             self._addCopy()
 
-    # геттеры и сеттеры не нужны тут
-    # если хочется как в enterprise, то нужно пометить поля чертой self.x -> self._x,
-    # что будет значить, что это поле относится к приватным
+        self.x = np.array(self.x)
+        self.y = np.array(self.y)
+        self.z = np.array(self.z)
 
-    def _addLayer(self):  # Пытался улучшить этот метод. Пока не знаю как. Не нравится, что проход по всем точкам идёт.
+    # Пытался улучшить этот метод. Пока не знаю как. Не нравится, что проход по всем точкам идёт.
+    def _addLayer(self):
+
         layerX = []
         layerY = []
         layerZ = []
