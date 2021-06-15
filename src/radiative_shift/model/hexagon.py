@@ -5,17 +5,13 @@ from .param import LENGTH
 
 class HexagonModel:
 
-    """
-    TODO: нужны матрицы взаимных расстояний, взаимных разностей z, x + iy, x - iy (4 матрицы NxN)
-    """
     def __init__(self, layers, copies):
-        self._n = 7  # n - число точек в одной плоскости. Оно меняется при добавлении слоя.
-        self._angle = 2 * np.pi / 6  # angle - определяет какой именно многоуголник мы повторяем. Не меняется.
+        self._nl = 1  # n - число слоев. Меняется при добавлении слоя.
         self.x = [0]
         self.y = [0]
         for v in range(6):
-            x = RADIUS * np.sin(v * self._angle)  # В цикле создаём сам многоугольник вокруг начала координат.
-            y = RADIUS * np.cos(v * self._angle)
+            x = RADIUS * np.sin(v * 2 * np.pi / 6)  # Везде убрал self._angle, не думаю что понадобится эта переменная
+            y = RADIUS * np.cos(v * 2 * np.pi / 6)
             self.x.append(x)
             self.y.append(y)
         self.z = [0] * (6 + 1)
@@ -26,38 +22,44 @@ class HexagonModel:
         for _ in range(copies):
             self._addCopy()
 
-        self.x = np.array(self.x)
-        self.y = np.array(self.y)
-        self.z = np.array(self.z)
+        self.distanceX = [[]]  # Добавил матрицы в таком виде. Если нужно - поменяю на x +- iy
+        self.distanceY = [[]]
+        self.distanceZ = [[]]
+        self.distanceR = [[]]
+        for i in range(len(self.x)):
+            for j in range(len(self.x)):
+                self.distanceX[i].append(self.x[i] - self.x[j])
+                self.distanceY[i].append(self.y[i] - self.y[j])
+                self.distanceZ[i].append(self.z[i] - self.z[j])
+                self.distanceR[i].append(
+                    np.sqrt(self.distanceX[i][j] ** 2 + self.distanceY[i][j] ** 2 + self.distanceZ[i][j] ** 2))
+            self.distanceX.append([])
+            self.distanceY.append([])
+            self.distanceZ.append([])
+            self.distanceR.append([])
 
-    # Пытался улучшить этот метод. Пока не знаю как. Не нравится, что проход по всем точкам идёт.
-    def _addLayer(self):
-
+    def _addLayer(self):  # Получилось улучшить метод, теперь нет прохода по точкам. Новые точки просто добавляются.
+        self._nl = self._nl + 1
         layerX = []
         layerY = []
         layerZ = []
-        for i, _ in enumerate(self.x):
-            # Строим шестиугольник в каждой вершине, можно улучшить в 3 раза, но не нужно
-            for j in range(6):
-                x = self.x[i] + RADIUS * np.sin(j * self._angle)
-                y = self.y[i] + RADIUS * np.cos(j * self._angle)
-                z = 0
-
-                if (round(x, 2), round(y, 2)) \
-                        in [(round(x, 2), round(y, 2)) for x, y
-                            in zip(self.x + layerX, self.y + layerY)]:
-                    continue
-                else:
-                    layerX.append(x)
-                    layerY.append(y)
-                    layerZ.append(z)
-                    self._n = self._n + 1
-
+        for i in range(6):
+            x = self._nl * RADIUS * np.sin(i * 2 * np.pi / 6)
+            y = self._nl * RADIUS * np.cos(i * 2 * np.pi / 6)
+            z = 0
+            layerX.append(x)
+            layerY.append(y)
+            layerZ.append(z)
+            for j in range(1, self._nl):
+                layerX.append(x + j * RADIUS * np.sin((i + 2) * 2 * np.pi / 6))
+                layerY.append(y + j * RADIUS * np.cos((i + 2) * 2 * np.pi / 6))
+                layerZ.append(z)
         self.x += layerX
         self.y += layerY
         self.z += layerZ
 
     def _addCopy(self):
-        self.z = self.z + self._n * [self.z[-1] + LENGTH]
-        self.x = self.x + self.x[0:self._n]
-        self.y = self.y + self.y[0:self._n]
+        n = int(1 + self._nl * (6 + 6 * self._nl) / 2)  # Тут считаю число атомов в одной плоскости
+        self.z = self.z + n * [self.z[-1] + LENGTH]
+        self.x = self.x + self.x[0:n]
+        self.y = self.y + self.y[0:n]
