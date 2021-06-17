@@ -1,9 +1,10 @@
 import numpy as np
 from .param import RADIUS
 from .param import LENGTH
+from .general import GeneralModel
 
 
-class HexagonModel:
+class HexagonModel(GeneralModel):
 
     def __init__(self, layers, copies):
         self._nl = 1  # n - число слоев. Меняется при добавлении слоя.
@@ -21,22 +22,6 @@ class HexagonModel:
 
         for _ in range(copies):
             self._addCopy()
-
-        self.distanceX = [[]]  # Добавил матрицы в таком виде. Если нужно - поменяю на x +- iy
-        self.distanceY = [[]]
-        self.distanceZ = [[]]
-        self.distanceR = [[]]
-        for i in range(len(self.x)):
-            for j in range(len(self.x)):
-                self.distanceX[i].append(self.x[i] - self.x[j])
-                self.distanceY[i].append(self.y[i] - self.y[j])
-                self.distanceZ[i].append(self.z[i] - self.z[j])
-                self.distanceR[i].append(
-                    np.sqrt(self.distanceX[i][j] ** 2 + self.distanceY[i][j] ** 2 + self.distanceZ[i][j] ** 2))
-            self.distanceX.append([])
-            self.distanceY.append([])
-            self.distanceZ.append([])
-            self.distanceR.append([])
 
     def _addLayer(self):  # Получилось улучшить метод, теперь нет прохода по точкам. Новые точки просто добавляются.
         self._nl = self._nl + 1
