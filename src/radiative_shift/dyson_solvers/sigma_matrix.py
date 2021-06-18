@@ -13,15 +13,12 @@ def markovianSigmaMatrixForV(model: GeneralModel):
 
     xm, x0, rr = model.getDistances()
     nat = np.shape(xm)[0]
-
     # форматирование ужасное, знаю :)
-    d1 = 1 * KV * ((DDI * 1 - 1j * rr * KV - (rr * KV) ** 2) / \
-                   ((rr * KV + np.identity(nat)) ** 3) \
-                   * np.exp(1j * rr * KV)) * (np.ones(nat) - np.identity(nat))
-    d2 = -1 * KV * ((DDI * 3 - 3 * 1j * rr * KV - (rr * KV) ** 2) / ((((KV * rr + \
-                                                                                         np.identity(
-                                                                                             nat)) ** 3)) * np.exp(
-        1j * KV * rr)))
+    d1 = 1 * KV * ((DDI * 1 - 1j * rr * KV - (rr * KV) ** 2) /
+                   ((rr * KV + np.identity(nat)) ** 3) *
+                   np.exp(1j * rr * KV)) * (np.ones(nat) - np.identity(nat))
+    d2 = -1 * KV * ((DDI * 3 - 3 * 1j * rr * KV - (rr * KV) ** 2) /
+                    ((KV * rr + np.identity(nat)) ** 3) * np.exp(1j * KV * rr)) * (np.ones(nat) - np.identity(nat))
 
     # Амплитуда перехода из |F = 0; F = 1, m> в |F = 1, m'; F = 0>
     di = np.zeros([nat, nat, 3, 3], dtype=np.complex)
@@ -35,12 +32,6 @@ def markovianSigmaMatrixForV(model: GeneralModel):
     di[:, :, 2, 0] = D01 * D1M0 * (-xm * xm * d2)
     di[:, :, 2, 1] = D01 * D00 * (-xm * x0 * d2)
     di[:, :, 2, 2] = D01 * D10 * (d1 + xm * np.conj(xm) * d2)
-
-    # Лучше переписать через numpy
-    for i in range(3):
-        for j in range(3):
-            for k in range(nat):
-                di[k, k, i, j] = 0
 
     sigma = np.zeros([3 * nat, 3 * nat], dtype=np.complex)
     #  Тоже лучше через numpy
