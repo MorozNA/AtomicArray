@@ -19,7 +19,7 @@ class DisorderedModel(GeneralModel):
             u = random.uniform(0, ((layers + 1) * RADIUS) ** 2)
             x = np.sqrt(u) * np.cos(phi)
             y = np.sqrt(u) * np.sin(phi)
-            z = random.uniform(0, LENGTH * copies)
+            z = random.uniform(i * LENGTH * copies / n, (i + 1) * LENGTH * copies / n)
             self.x.append(x)
             self.y.append(y)
             self.z.append(z)

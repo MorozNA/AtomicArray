@@ -29,6 +29,3 @@ fig = plt.figure()
 ax = plt.axes(projection='3d')
 ax.scatter3D(x, y, z, s=3)
 plt.show()
-
-ax, ay, az, ar = test.getDistances()  # Возвращает 4 матрицы np.array
-print(ar)

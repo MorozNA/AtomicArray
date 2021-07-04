@@ -1,4 +1,5 @@
 import numpy as np
+from .param import LFACTOR
 
 
 class GeneralModel:
@@ -12,7 +13,7 @@ class GeneralModel:
         self.z = []
 
     def getDistances(self):
-        distanceXM = []  # Добавил матрицы в таком виде. Если нужно - поменяю на x +- iy
+        distanceXM = []
         distanceZ = []
         for i in range(len(self.x)):
             distanceXM.append([])
@@ -26,3 +27,15 @@ class GeneralModel:
         arrR = np.sqrt(2 * np.square(np.abs(arrXM)) + np.square(arrZ)) \
                + np.identity(np.shape(arrZ)[0])  # Ignoring division by zero
         return arrXM / arrR, arrZ / arrR, arrR
+
+    def removeDuplicates(self, r=LFACTOR):
+        excess = []
+        for i in range(len(self.x)):
+            for j in range(len(self.x)):
+                if i != j and (self.x[i] - self.x[j]) ** 2 \
+                        + (self.y[i] - self.y[j]) ** 2 + (self.z[i] - self.z[j]) ** 2 < r ** 2:
+                    excess.append(i)
+                    continue
+        self.x = np.delete(self.x, excess)
+        self.y = np.delete(self.y, excess)
+        self.z = np.delete(self.z, excess)
