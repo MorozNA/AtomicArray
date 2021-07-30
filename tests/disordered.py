@@ -4,12 +4,12 @@ from src.radiative_shift import DisorderedModel
 
 # Тест программы. Можно сначала добавлять копии, но тогда addLayer будет проходить по всем копиям, что занимает время.
 
-layers = 5
-copies = 10
+n = 1400
+r = 6
 
 # Перенес в конструктор, пометил addLayer и addCopy чертами
 
-test = DisorderedModel(layers, copies)
+test = DisorderedModel(n, r)
 
 x = test.x
 y = test.y
@@ -18,7 +18,6 @@ z = test.z
 print(len(x))
 assert len(x) == len(y)
 assert len(x) == len(z)
-assert len(x) == (copies + 1) * (1 + 3 * (layers + 2) * (layers + 1))
 
 plt.scatter(x, y, s=3)
 plt.axis('square')

@@ -15,7 +15,7 @@ class DisorderedSphere(GeneralModel):
         for i in range(n):
             u = 2 * random.uniform(0, 1) - 1
             phi = 2 * np.pi * random.uniform(0, 1)
-            r = random.uniform(0, radius) ** (1 / 3.)
+            r = random.uniform(0, radius ** 3) ** (1 / 3.)
             x = r * np.cos(phi) * (1 - u ** 2) ** 0.5
             y = r * np.sin(phi) * (1 - u ** 2) ** 0.5
             z = r * u
