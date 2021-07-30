@@ -1,16 +1,12 @@
 import numpy as np
 from .param import LFACTOR
+from abc import ABC
 
 
-class GeneralModel:
-    """
-    TODO: юниттест
-    """
-
-    def __init__(self):
-        self.x = []
-        self.y = []
-        self.z = []
+class GeneralModel(ABC):
+    x: [].__class__
+    y: [].__class__
+    z: [].__class__
 
     def getDistances(self):
         distanceXM = []

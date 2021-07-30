@@ -1,18 +1,23 @@
 import numpy as np
-from .param import KV, DDI, HBAR, D01M, D1M0, D00, D10, D01
+from .param import KV, DDI, HBAR, D01M, D1M0, D00, D10, D01, GAMMA
 from src.radiative_shift.model import GeneralModel
+from abc import ABC, abstractmethod
 
-class markovianSigmaMatrixForV:
-    """
-    TODO: Напишу юниттест
 
-    :param model:
-    :return: sigma matrix
-    """
+class SigmaMatrix(ABC):
+    sigma: np.array
+
+    @abstractmethod
+    def getResolvetAtFrequency(self, omega):
+        pass
+
+
+class MarkovianSigmaMatrixForV(SigmaMatrix):
+
     def __init__(self, model: GeneralModel):
         xm, x0, rr = model.getDistances()
         nat = np.shape(xm)[0]
-        # форматирование ужасное, знаю :)
+
         d1 = 1 * KV * ((DDI * 1 - 1j * rr * KV - (rr * KV) ** 2) /
                        ((rr * KV + np.identity(nat)) ** 3) *
                        np.exp(1j * rr * KV)) * (np.ones(nat) - np.identity(nat))
@@ -32,14 +37,8 @@ class markovianSigmaMatrixForV:
         di[:, :, 2, 1] = D01 * D00 * (-xm * x0 * d2)
         di[:, :, 2, 2] = D01 * D10 * (d1 + xm * np.conj(xm) * d2)
 
-        self.sigma = np.zeros([3 * nat, 3 * nat], dtype=np.complex)
-        #  Тоже лучше через numpy
-        for n1 in range(nat):  # initial excited
-            for n2 in range(nat):  # final excited
-                for i in range(3):
-                    for j in range(3):
-                        self.sigma[3 * n1 + j, 3 * n2 + i] = 3 * di[n1, n2, j, i]
+        self.sigma = 3 * np.reshape(np.transpose(di, axes=(0, 2, 1, 3)), [3 * nat, 3 * nat])
 
-    def heWhoShallNotBeNamed(self, chi):
-        needed = np.linalg.inv((np.add(np.eye(len(self.sigma)), chi * self.sigma)))
+    def getResolvetAtFrequency(self, omega):
+        needed = np.linalg.inv((omega + 1j * GAMMA / 2)*np.eye(len(self.sigma)) + self.sigma / HBAR)
         return needed

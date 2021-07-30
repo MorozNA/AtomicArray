@@ -1,4 +1,4 @@
-from src.radiative_shift import markovianSigmaMatrixForV
+from src.radiative_shift import MarkovianSigmaMatrixForV
 from src.radiative_shift import HexagonSphere
 from src.radiative_shift.model.param import SPHERE_RADIUS as RADIUS
 import numpy as np
@@ -13,7 +13,8 @@ for i in np.linspace(0.1, 1.5, 20):
     dens = 3 * natoms / (4 * np.pi * radius**3)
     print(dens)
 
-    eigs, _ = np.linalg.eig(markovianSigmaMatrixForV(model))
+    sigma = MarkovianSigmaMatrixForV(model)
+    eigs, _ = np.linalg.eig(sigma.sigma)
     eigs = np.sort(np.imag(eigs))
     print("0 = {:1.5}".format(abs(eigs[-1] - 0.5))) # dark state exists
     print("1 = {:2.2}".format(-1*(radius**2 * eigs[0] / natoms))) # see PRA 93, 043830
