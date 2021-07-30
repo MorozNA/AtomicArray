@@ -26,3 +26,6 @@ class DisorderedModel(GeneralModel):
             self.x.append(x)
             self.y.append(y)
             self.z.append(z)
+
+        self.measureProperties()
+        self.writeLog()

@@ -31,6 +31,9 @@ class HexagonModel(GeneralModel):
         for _ in range(copies):
             self._addCopy()
 
+        self.measureProperties()
+        self.writeLog()
+
     def _addLayer(self):
         self._nl = self._nl + 1
         layerX = []

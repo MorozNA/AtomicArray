@@ -1,10 +1,14 @@
+import logging
+
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from src.radiative_shift import HexagonModel
 
 # Тест программы.
 
-n = 1400
+logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
+
+n = 2400
 r = 4.8
 
 test = HexagonModel(n, r)
@@ -15,7 +19,6 @@ z = test.z
 
 assert len(x) == len(y)
 assert len(x) == len(z)
-print(len(x))
 
 plt.scatter(x, y, s=5)
 plt.axis('square')

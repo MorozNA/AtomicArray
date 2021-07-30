@@ -1,12 +1,21 @@
 import numpy as np
 from .param import LFACTOR
 from abc import ABC
+import logging
+
+
+class Properties:
+    radius: float
+    length: float
+    density: float
+    noa: float
 
 
 class GeneralModel(ABC):
     x: [].__class__
     y: [].__class__
     z: [].__class__
+    properties: Properties
 
     def getDistances(self):
         distanceXM = []
@@ -35,3 +44,22 @@ class GeneralModel(ABC):
         self.x = np.delete(self.x, excess)
         self.y = np.delete(self.y, excess)
         self.z = np.delete(self.z, excess)
+
+
+    def measureProperties(self):
+
+        self.properties = Properties()
+        self.properties.radius = np.amax(np.sqrt([x**2 + y**2 for x, y in zip(self.x, self.y)])) / 2 / np.pi
+        self.properties.length = np.amax(self.z)
+        self.properties.noa = len(self.x)
+        self.properties.density = len(self.x) / self.properties.length / self.properties.radius**2 / np.pi
+
+    def writeLog(self):
+
+        logging.info("=========================================================")
+        logging.info("Сylinder parameters")
+        logging.info("Length = {:2.2}".format(self.properties.length) + " λ / 2 π")
+        logging.info("Radius = {:2.2}".format(self.properties.radius) + " λ / 2 π")
+        logging.info("Number of atoms {:}".format(self.properties.noa))
+        logging.info("Density {:2.2}".format(self.properties.density) + " nλbar^3")
+        logging.info("=========================================================")
