@@ -8,7 +8,7 @@ class SigmaMatrix(ABC):
     sigma: np.array
 
     @abstractmethod
-    def getResolvetAtFrequency(self, omega):
+    def getResolventAtFrequency(self, omega):
         pass
 
 
@@ -39,6 +39,6 @@ class MarkovianSigmaMatrixForV(SigmaMatrix):
 
         self.sigma = 3 * np.reshape(np.transpose(di, axes=(0, 2, 1, 3)), [3 * nat, 3 * nat])
 
-    def getResolvetAtFrequency(self, omega):
+    def getResolventAtFrequency(self, omega):
         needed = np.linalg.inv((omega + 1j * GAMMA / 2)*np.eye(len(self.sigma)) + self.sigma / HBAR)
         return needed
