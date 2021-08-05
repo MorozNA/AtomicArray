@@ -7,13 +7,8 @@ from .general import GeneralModel
 
 class DisorderedModel(GeneralModel):
 
-    def __init__(self, n, radius):
-        unitradius = radius / int(radius / RADIUS)
-        unitlength = LENGTH
-        layers = int(radius / unitradius - 1)
-        copies = int(n / (1 + 3 * (layers + 2) * (layers + 1)))
-        length = unitlength * copies
-        # Если вводить density, то length = n / (density * np.pi * r ** 2)
+    def __init__(self, n, radius, density):
+        length = n / (density * np.pi * radius ** 2)
         self.x = []
         self.y = []
         self.z = []

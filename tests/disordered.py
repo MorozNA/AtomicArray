@@ -6,10 +6,11 @@ from src.radiative_shift import DisorderedModel
 
 n = 1400
 r = 6
+density = 40
 
 # Перенес в конструктор, пометил addLayer и addCopy чертами
 
-test = DisorderedModel(n, r)
+test = DisorderedModel(n, r, density)
 
 x = test.x
 y = test.y
