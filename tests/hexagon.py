@@ -10,8 +10,9 @@ logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logg
 
 n = 2400
 r = 4.8
+density = 40
 
-test = HexagonModel(n, r)
+test = HexagonModel(n, r, density)
 
 x = test.x
 y = test.y

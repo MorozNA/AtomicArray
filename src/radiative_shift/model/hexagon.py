@@ -6,24 +6,29 @@ from .general import GeneralModel
 
 class HexagonModel(GeneralModel):
 
-    def __init__(self, n, radius):
-        self.unitradius = radius / int(radius / RADIUS)
+    def __init__(self, n, radius, density):
+        length = n / (density * np.pi * radius ** 2)
+        self.unitradius = RADIUS
         self.unitlength = LENGTH
-        layers = int(radius / self.unitradius - 1)
-        copies = int(n / (1 + 3 * (layers + 2) * (layers + 1)))
-        # Если добавить density в аргумент, то расстояние между копиями будет подстраиваться под плотность
-        # length = n / (density * np.pi * radius ** 2)
-        # self.unitlength = length / int(n / (1 + 3 * (layers + 2) * (layers + 1)))
-        # copies = int(length/self.unitlength - 1)
-        self._nl = 1  # n - число слоев. Меняется при добавлении слоя.
+        layers = int(radius / self.unitradius)
+        copies = int(length / self.unitlength)
+        # Число атомов в одной копии: 1 + 3 * layers * (layers + 1)
+        flag = 0
+        while flag != 1:
+            if n >= copies * (1 + 3 * (layers + 1) * (layers + 2)):
+                layers += 1
+                self.unitradius = radius / layers
+                if n >= (copies + 1) * (1 + 3 * (layers + 1) * layers):
+                    copies += 1
+                    self.unitlength = length / copies
+                else:
+                    flag = 1
+            else:
+                flag = 1
+        self._nl = 0  # n - число слоев. Меняется при добавлении слоя.
         self.x = [0]
         self.y = [0]
-        for v in range(6):
-            x = self.unitradius * np.sin(v * 2 * np.pi / 6)
-            y = self.unitradius * np.cos(v * 2 * np.pi / 6)
-            self.x.append(x)
-            self.y.append(y)
-        self.z = [0] * (6 + 1)
+        self.z = [0]
 
         for _ in range(layers):
             self._addLayer()
