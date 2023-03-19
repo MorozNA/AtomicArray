@@ -1,14 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
 from src.radiative_shift import DisorderedSphere
+from src.radiative_shift.dyson_solvers.param import LBAR
 
 
-layers = 5
-copies = 10
-n = (copies + 1) * (1 + 3 * (layers + 2) * (layers + 1))
+density = 100 / (LBAR ** 3)
+radius = 1 * LBAR
+n = int(density * 4 / 3 * np.pi * radius ** 3)
 
-test = DisorderedSphere(n)
+test = DisorderedSphere(density, radius)
 
 x = test.x
 y = test.y
@@ -29,17 +29,18 @@ ax = plt.axes(projection='3d')
 ax.scatter3D(x, y, z, s=3)
 plt.show()
 
-rx, rz, rr = test.getDistances()
+rx, rz, rr = test.calculate_distances()
 counter = []
+lfactor = density ** (-1/3) / 2
 # В цикле повторяю всё из метода removeDuplicates, но через матрицу расстояний
 for i in range(n):
     for j in range(n):
-        if i != j and rr[i][j] < 0.1:
+        if i != j and rr[i][j] < lfactor:
             counter.append(i)
             continue
 
 
-test.removeDuplicates()
+test.remove_duplicates(lfactor)
 x = test.x
 y = test.y
 z = test.z

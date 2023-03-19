@@ -53,7 +53,7 @@ class GeneralModel(ABC):
 
     def measure_properties(self):
         self.properties = Properties()
-        self.properties.radius = np.amax(np.sqrt(np.square(self.x) + np.square(self.y))) / LBAR
+        self.properties.radius = np.amax(np.sqrt([x ** 2 + y ** 2 for x, y in zip(self.x, self.y)])) / LBAR
         self.properties.length = np.amax(self.z) / LBAR
         self.properties.noa = len(self.x)
         self.properties.density = len(self.x) / self.properties.length / self.properties.radius ** 2 / np.pi

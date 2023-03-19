@@ -1,5 +1,5 @@
 import numpy as np
-from .param import KV, DDI, HBAR, D01M, D1M0, D00, D10, D01, GAMMA
+from .param import KV, DDI, HBAR, GAMMA
 from src.radiative_shift.model import GeneralModel
 from abc import ABC, abstractmethod
 

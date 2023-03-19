@@ -1,14 +1,12 @@
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from src.radiative_shift import HexagonSphere
-from src.radiative_shift.model.param import SPHERE_RADIUS
 import numpy as np
 
-layers = 7
-copies = 11
+dens = 1 * (2 * 3.14 / 780e-7)**3
+radius = 10/(2 * 3.14 / 780e-7)
 
 # Tessting execution
-test = HexagonSphere(layers, copies)
+test = HexagonSphere(dens, radius)
 
 x = test.x
 y = test.y
@@ -23,13 +21,12 @@ plt.show()
 # print(ax)
 
 # Testing density
-RADIUS = SPHERE_RADIUS
 factors = np.linspace(0.9, 1.5, 100)
 density = []
 natoms = []
 for factor in factors:
-    model = HexagonSphere(layers, copies, RADIUS * factor)
-    density.append(len(model.x) / 4 / np.pi * 3 / (RADIUS * factor)**3)
+    model = HexagonSphere(dens, radius * factor)
+    density.append(len(model.x) / 4 / np.pi * 3 / (radius * factor)**3)
     natoms.append(len(model.x))
 
 plt.plot(factors, density)

@@ -7,8 +7,8 @@ class HexagonModel(GeneralModel):
     def __init__(self, length, radius, density):
         super().__init__()
         n = int(length * (density * np.pi * radius ** 2))
-        self.unitradius = (radius / int(radius / (density ** (1/3)))).real
-        self.unitlength = (length / int(length / (density ** (1/3)))).real
+        self.unitradius = density ** (-1 / 3)
+        self.unitlength = density ** (-1 / 3)
         layers = int(radius / self.unitradius)
         copies = int(length / self.unitlength)
         while True:
@@ -26,10 +26,16 @@ class HexagonModel(GeneralModel):
         self.x = [0]
         self.y = [0]
         self.z = [0]
+
         for _ in range(layers):
             self._add_layer()
         for _ in range(copies):
             self._add_copy()
+
+        self.x = np.array(self.x)
+        self.y = np.array(self.y)
+        self.z = np.array(self.z)
+
         self.measure_properties()
         self.write_log()
 
