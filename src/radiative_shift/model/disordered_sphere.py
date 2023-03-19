@@ -1,24 +1,16 @@
 import numpy as np
-import random
-from .param import SPHERE_RADIUS
 from .general import GeneralModel
 
 
+# Конструктор класса строит заданное количество точек, равномерно распределенных внутри сферы радиуса radius.
 class DisorderedSphere(GeneralModel):
 
-    def __init__(self, n, radius=SPHERE_RADIUS):
-        # число точек в одной плоскости (1 + 3 * (layers + 2) * (layers + 1))
-        # число плоскостей (1 + copies)
-        self.x = []
-        self.y = []
-        self.z = []
-        for i in range(n):
-            u = 2 * random.uniform(0, 1) - 1
-            phi = 2 * np.pi * random.uniform(0, 1)
-            r = random.uniform(0, radius ** 3) ** (1 / 3.)
-            x = r * np.cos(phi) * (1 - u ** 2) ** 0.5
-            y = r * np.sin(phi) * (1 - u ** 2) ** 0.5
-            z = r * u
-            self.x.append(x)
-            self.y.append(y)
-            self.z.append(z)
+    def __init__(self, density, radius):
+        super().__init__()
+        n = int(density * 4/3 * np.pi * radius**3)
+        u = np.random.uniform(-1, 1, size=n)
+        phi = np.random.uniform(0, 2*np.pi, size=n)
+        r = (np.random.uniform(0, 1, size=n) ** (1/3)) * radius
+        self.x = r * np.cos(phi) * (1 - u**2)**0.5
+        self.y = r * np.sin(phi) * (1 - u**2)**0.5
+        self.z = r * u

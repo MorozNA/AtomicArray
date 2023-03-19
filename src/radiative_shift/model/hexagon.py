@@ -1,20 +1,17 @@
 import numpy as np
-from .param import RADIUS
-from .param import LENGTH
 from .general import GeneralModel
 
 
 class HexagonModel(GeneralModel):
 
-    def __init__(self, n, radius, density):
-        length = n / (density * np.pi * radius ** 2)
-        self.unitradius = RADIUS
-        self.unitlength = LENGTH
+    def __init__(self, length, radius, density):
+        super().__init__()
+        n = int(length * (density * np.pi * radius ** 2))
+        self.unitradius = (radius / int(radius / (density ** (1/3)))).real
+        self.unitlength = (length / int(length / (density ** (1/3)))).real
         layers = int(radius / self.unitradius)
         copies = int(length / self.unitlength)
-        # Число атомов в одной копии: 1 + 3 * layers * (layers + 1)
-        flag = 0
-        while flag != 1:
+        while True:
             if n >= copies * (1 + 3 * (layers + 1) * (layers + 2)):
                 layers += 1
                 self.unitradius = radius / layers
@@ -22,25 +19,22 @@ class HexagonModel(GeneralModel):
                     copies += 1
                     self.unitlength = length / copies
                 else:
-                    flag = 1
+                    break
             else:
-                flag = 1
-        self._nl = 0  # n - число слоев. Меняется при добавлении слоя.
+                break
+        self._nl = 0
         self.x = [0]
         self.y = [0]
         self.z = [0]
-
         for _ in range(layers):
-            self._addLayer()
-
+            self._add_layer()
         for _ in range(copies):
-            self._addCopy()
+            self._add_copy()
+        self.measure_properties()
+        self.write_log()
 
-        self.measureProperties()
-        self.writeLog()
-
-    def _addLayer(self):
-        self._nl = self._nl + 1
+    def _add_layer(self):
+        self._nl += 1
         layerX = []
         layerY = []
         layerZ = []
@@ -59,8 +53,8 @@ class HexagonModel(GeneralModel):
         self.y += layerY
         self.z += layerZ
 
-    def _addCopy(self):
-        n = int(1 + self._nl * (6 + 6 * self._nl) / 2)  # Тут считаю число атомов в одной плоскости
-        self.z = self.z + n * [self.z[-1] + self.unitlength]
-        self.x = self.x + self.x[0:n]
-        self.y = self.y + self.y[0:n]
+    def _add_copy(self):
+        n = int(1 + self._nl * (6 + 6 * self._nl) / 2)
+        self.z += n * [self.z[-1] + self.unitlength]
+        self.x += self.x[0:n]
+        self.y += self.y[0:n]

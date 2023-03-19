@@ -1,26 +1,24 @@
 import numpy as np
-import random
-from .param import RADIUS
-from .param import LENGTH
 from .general import GeneralModel
 
 
 class DisorderedModel(GeneralModel):
 
-    def __init__(self, n, radius, density):
-        length = n / (density * np.pi * radius ** 2)
-        self.x = []
-        self.y = []
-        self.z = []
-        for i in range(n):
-            phi = random.uniform(0, 2 * np.pi)
-            u = random.uniform(0, radius ** 2)
-            x = np.sqrt(u) * np.cos(phi)
-            y = np.sqrt(u) * np.sin(phi)
-            z = random.uniform(0, length)
-            self.x.append(x)
-            self.y.append(y)
-            self.z.append(z)
+    def __init__(self, length, radius, density):
+        super().__init__()
+        n = int(length * (density * np.pi * radius ** 2))
 
-        self.measureProperties()
-        self.writeLog()
+        # Generate random points using numpy's random functions
+        phi = np.random.uniform(0, 2 * np.pi, size=n)
+        u = np.random.uniform(0, radius ** 2, size=n)
+        x = np.sqrt(u) * np.cos(phi)
+        y = np.sqrt(u) * np.sin(phi)
+        z = np.random.uniform(0, length, size=n)
+
+        # Use numpy arrays instead of Python lists
+        self.x = np.array(x)
+        self.y = np.array(y)
+        self.z = np.array(z)
+
+        self.measure_properties()
+        self.write_log()
