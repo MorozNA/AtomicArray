@@ -40,7 +40,7 @@ class GeneralModel(ABC):
         return distance_xm / arr_r, distance_z / arr_r, arr_r
 
     def calculate_distances_to_atom(self, atom_index=-1):
-        distance_xm = self.x[atom_index] - self.x - 1j * self.y[atom_index] + 1j * self.y
+        distance_xm = (self.x[atom_index] - self.x - 1j * self.y[atom_index] + 1j * self.y) / np.sqrt(2)
         distance_z = self.z[atom_index] - self.z
         arr_r = np.sqrt(2 * np.square(np.abs(distance_xm)) + np.square(distance_z))
         arr_r[atom_index] = 1

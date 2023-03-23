@@ -15,3 +15,9 @@ GAMMA = 38.11e6
 # OM = C / LBAR
 # KV = OM / C
 # GAMMA = 32.815e6
+
+# Rubidium 87
+# GAMMA = 1
+# OM = (C / (780e-7 / 2 / np.pi)) / (38.11e6) * GAMMA
+# LBAR = C / OM
+# KV = OM / C
