@@ -20,15 +20,14 @@ def d_up(M0, M, F0=4, F=5, J0=1/2, J=3/2, I=7/2):
     I (float, optional): The nuclear spin.
 
     Returns:
-    numpy.ndarray: The Contravariant spherical components of the dipole operator for chosen transition.
+    numpy.ndarray: The contravariant spherical components of the dipole operator for chosen transition.
     """
     q = [-1, 0, 1]
-    j6 = wigner_6j(J, F, I, F0, J0, 1)
-    j3 = np.array([wigner_3j(F0, 1, F, M0, q[i], -M) for i in range(3)])
-    d_vec = (-1) ** (I + J - M) * np.sqrt((2 * F0 + 1) * (2 * F + 1)) * j6 * j3
-    d = np.array([-d_vec[2], d_vec[1], -d_vec[0]], dtype=np.complex)
-    reduced_up = np.sqrt(3 * HBAR * GAMMA / (KV ** 3))
-    return d * reduced_up
+    j3 = np.array([wigner_3j(F, 1, F0, M, q[i], -M0) for i in range(3)])
+    j6 = wigner_6j(J0, J, 1, F, F0, I)
+    d_vec = (-1) ** (J0 + M0 + I) * np.sqrt((2 * F0 + 1) * (2 * F + 1)) * j6 * j3
+    reduced_up = np.sqrt(3 * HBAR * GAMMA / 4 / (KV ** 3)) * np.sqrt(2 * J + 1)
+    return np.array([-d_vec[2], d_vec[1], -d_vec[0]], dtype=np.complex) * reduced_up
 
 
 def d_down(M0, M, F0=4, F=5, J0=1 / 2, J=3 / 2, I=7 / 2):
@@ -37,10 +36,11 @@ def d_down(M0, M, F0=4, F=5, J0=1 / 2, J=3 / 2, I=7 / 2):
 
 
 def d_up_v(k, M0, M):
-    F0, F = 0, 1
+    J0, J = 0, 1
     q = [-1, 0, 1]
-    d_vec = [CG(F0, M0, 1, q[i], F, M).doit() / np.sqrt((2 * F + 1)) for i in range(3)]
-    reduced_v = np.sqrt(3 * HBAR * GAMMA / (k ** 3)) * np.sqrt((2 * F + 1) / 4)
+    j3 = np.array([wigner_3j(J, 1, J0, M, q[i], -M0) for i in range(3)], dtype=np.complex)
+    d_vec = (-1) ** (J - 1 + M0) * j3
+    reduced_v = np.sqrt(3 * HBAR * GAMMA / 4 / (k ** 3)) * np.sqrt(2 * J + 1)
     return np.array([-d_vec[2], d_vec[1], -d_vec[0]], dtype=np.complex) * reduced_v
 
 
