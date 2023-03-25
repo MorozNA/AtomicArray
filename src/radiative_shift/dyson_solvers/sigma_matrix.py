@@ -83,8 +83,8 @@ class MarkovianSigmaMatrixForV(SigmaMatrix):
                 for k in range(len(mV)):
                     dc[:, i * nat:(i + 1) * nat, j, k] = np.dot(g @ uc[i, j], vc[k]) * d1
                     db[:, i * nat:(i + 1) * nat, k, j] = np.dot(g @ ub[k], vb[i, j]) * d1
-                    outerc = np.outer(uc[i], vc[k])
-                    outerb = np.outer(ub[k], vb[i])
+                    outerc = np.outer(uc[i, j], vc[k])
+                    outerb = np.outer(ub[k], vb[i, j])
                     for q in range(3):
                         for p in range(3):
                             dc[:, i * nat:(i + 1) * nat, j, k] = \
@@ -99,5 +99,5 @@ class MarkovianSigmaMatrixForV(SigmaMatrix):
         for i in range(len(m0)):
             c = sigmaC[:, i * nat * len(mV): (i + 1) * nat * len(mV)] / HBAR
             b = sigmaB[i * nat * len(mV): (i + 1) * nat * len(mV), :] / HBAR
-            sigma_out = sigma_out + np.dot(c, np.dot(resolvent, b))
+            sigma_out = sigma_out + c @ resolvent @ b
         return sigma_out
