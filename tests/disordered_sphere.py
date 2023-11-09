@@ -1,11 +1,13 @@
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from src.radiative_shift import DisorderedSphere
 from src.radiative_shift.dyson_solvers.param import LBAR
 
+logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
-density = 100 / (LBAR ** 3)
-radius = 1 * LBAR
+density = 10
+radius = 200e-7 / LBAR
 n = int(density * 4 / 3 * np.pi * radius ** 3)
 
 test = DisorderedSphere(density, radius)

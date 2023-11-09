@@ -1,12 +1,17 @@
+import logging
 import matplotlib.pyplot as plt
 from src.radiative_shift import HexagonSphere
 import numpy as np
+from src.radiative_shift.dyson_solvers.param import LBAR, KV
 
-dens = 1 * (2 * 3.14 / 780e-7)**3
-radius = 10/(2 * 3.14 / 780e-7)
+logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
-# Tessting execution
-test = HexagonSphere(dens, radius)
+R = 250
+DEN = 20
+
+r = R / 780 * 2 * np.pi * LBAR
+density = DEN * KV ** 3
+test = HexagonSphere(r, density)
 
 x = test.x
 y = test.y
@@ -21,13 +26,13 @@ plt.show()
 # print(ax)
 
 # Testing density
-factors = np.linspace(0.9, 1.5, 100)
-density = []
-natoms = []
-for factor in factors:
-    model = HexagonSphere(dens, radius * factor)
-    density.append(len(model.x) / 4 / np.pi * 3 / (radius * factor)**3)
-    natoms.append(len(model.x))
-
-plt.plot(factors, density)
-plt.show()
+# factors = np.linspace(0.9, 1.5, 100)
+# density = []
+# natoms = []
+# for factor in factors:
+#     model = HexagonSphere(radius * factor, density)
+#     density.append(len(model.x) / 4 / np.pi * 3 / (radius * factor)**3)
+#     natoms.append(len(model.x))
+#
+# plt.plot(factors, density)
+# plt.show()

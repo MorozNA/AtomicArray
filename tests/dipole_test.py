@@ -2,8 +2,6 @@ import numpy as np
 from src.radiative_shift import d_up, d_down, d_up_v, d_down_v
 from src.radiative_shift.dyson_solvers.param import KV, HBAR, GAMMA
 
-import time
-
 # Define Rb 87 D-2 line transition parameters
 F0 = 1
 F = 0
@@ -34,15 +32,30 @@ print('_________________')
 # Constants used for comparison
 e = 4.8032e-10  # Elementary charge in CGS units
 a0 = 0.5292e-8  # Bohr radius in cm
-J0 = 1 / 2  # Ground state total angular momentum
 
 # Calculate reduced matrix element for Rb 87 transition from Steck
-rb_reduced = 4.227 * e * a0 * np.sqrt(2 * J0 + 1) / e / a0
+rb_reduced = 4.227
 
-# Calculate reduced matrix element for Rb 87 transition using dipole moment and KV
-rb_reduced_calculated = np.sqrt(3 * HBAR * GAMMA / (KV ** 3)) / e / a0
+# TODO: add formula
+# Calculate reduced matrix element for Rb 87 transition using formula
+rb_reduced_calculated = np.sqrt(3 * HBAR * GAMMA / (KV ** 3)) * np.sqrt(2 * J0 + 1) / np.sqrt(2 * J + 1) / e / a0
 
 print(rb_reduced)
 print(rb_reduced_calculated)
 
 print(np.allclose(rb_reduced, rb_reduced_calculated, rtol=1e-03))
+
+print('\n')
+print('\n')
+g = np.array([[0, 0, -1], [0, 1, 0], [-1, 0, 0]])
+m = [-1, 0, 1]
+u = np.array([d_up_v(KV, 0, mi) for mi in m])
+v = np.array([d_down_v(KV, 0, mi) for mi in m])
+print(np.shape(u))
+print(u[0])
+print(v[0])
+
+outer = np.outer(u[0], v[0]) / abs(u[0, 0]) / abs(v[0, 2])
+outer = outer
+print(np.round(outer, 2))
+print(outer[1])

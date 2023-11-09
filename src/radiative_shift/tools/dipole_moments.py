@@ -1,12 +1,13 @@
 import numpy as np
 from sympy.physics.wigner import wigner_3j
 from sympy.physics.wigner import wigner_6j
-from sympy.physics.quantum.cg import CG
+# from sympy.physics.quantum.cg import CG
 from src.radiative_shift.dyson_solvers.param import HBAR, GAMMA, KV
+
 
 # 133Cs parameters are F0=4, F=5, J0=1/2, J=3/2, I=7/2
 # 87Rb parameters are F0=1, F=0, J0=1/2, J=3/2, I=3/2
-def d_up(M0, M, F0=4, F=5, J0=1/2, J=3/2, I=7/2):
+def d_up(M0, M, F0=4, F=5, J0=1 / 2, J=3 / 2, I=7 / 2):
     """
     Calculates the dipole matrix element <J0,M0|q|J,M> using the Wigner-Eckart theorem.
 

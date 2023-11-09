@@ -1,16 +1,17 @@
 import numpy as np
 from .general import GeneralModel
+from .param import LBAR
 
 
 class HexagonModel(GeneralModel):
 
     def __init__(self, length, radius, density):
         super().__init__()
-        n = int(length * (density * np.pi * radius ** 2))
+        n = round(length * (density * np.pi * radius ** 2))
         self.unitradius = density ** (-1 / 3)
         self.unitlength = density ** (-1 / 3)
-        layers = int(radius / self.unitradius)
-        copies = int(length / self.unitlength)
+        layers = round(radius / self.unitradius)
+        copies = round(length / self.unitlength)
         while True:
             if n >= copies * (1 + 3 * (layers + 1) * (layers + 2)):
                 layers += 1
@@ -22,7 +23,10 @@ class HexagonModel(GeneralModel):
                     break
             else:
                 break
+        self.unitradius = radius / layers
+        self.unitlength = length / copies
         self._nl = 0
+        # Lists are faster to append, after the addition of layers and copies they will be transformed to np.arrays
         self.x = [0]
         self.y = [0]
         self.z = [0]
@@ -60,7 +64,13 @@ class HexagonModel(GeneralModel):
         self.z += layerZ
 
     def _add_copy(self):
-        n = int(1 + self._nl * (6 + 6 * self._nl) / 2)
+        n = round(1 + self._nl * (6 + 6 * self._nl) / 2)
         self.z += n * [self.z[-1] + self.unitlength]
         self.x += self.x[0:n]
         self.y += self.y[0:n]
+
+    def measure_properties(self):
+        self.properties.radius = np.amax(np.sqrt([x ** 2 + y ** 2 for x, y in zip(self.x, self.y)])) / LBAR
+        self.properties.length = np.amax(self.z) / LBAR
+        self.properties.noa = len(self.x)
+        self.properties.density = len(self.x) / self.properties.length / (np.pi * self.properties.radius ** 2)
