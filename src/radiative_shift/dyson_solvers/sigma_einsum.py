@@ -1,17 +1,11 @@
 import numpy as np
+from .sigma_matrix import SigmaMatrix
 from src.radiative_shift.constants import DDI, HBAR
 from src.radiative_shift.model import GeneralModel
-from src.radiative_shift.tools import d_up, d_down
-from src.radiative_shift.tools import reshape_to_blocks, reshape_to_matrix
-from abc import ABC
+from src.radiative_shift.tools import d_up, d_down, reshape_to_matrix
 
 
-class SigmaMatrix(ABC):
-    sigma: np.array
-
-
-# TODO: get rid of the class, only leave functions
-class MarkovianSigmaMatrixForV(SigmaMatrix):
+class SigmaEin(SigmaMatrix):
     """
     Self-energy matrix for a (F0=0, F=1) - atomic medium.
 
@@ -33,7 +27,8 @@ class MarkovianSigmaMatrixForV(SigmaMatrix):
         xm, x0, rr = model.calculate_distances()
         nat = len(model.x)
 
-        x = np.zeros((3, len(xm), len(xm)), dtype='complex128')
+        # Covariant spherical components of the unit separation vector.
+        x = np.zeros((3, nat, nat), dtype="complex128")
         x[0] = xm
         x[1] = x0
         x[2] = -np.conj(xm)
@@ -49,31 +44,25 @@ class MarkovianSigmaMatrixForV(SigmaMatrix):
         d2 = -1 * ((DDI * 3 - 3 * 1j * k_medium * rr - (k_medium * rr) ** 2) / ((rr + np.identity(nat)) ** 3)
                 * np.exp(1j * k_medium * rr)) * (np.ones(nat) - np.identity(nat))
 
-        di = np.zeros((nat, nat, 3, 3), dtype=complex)
+        outer1 = np.einsum("ij,ab->ijab", g, d1)
+        outer2 = np.einsum("iab,jab->ijab", x, x) * d2
+        D = outer1 + outer2
 
         m = self.medium_atom.m
 
-        # d_down = <e|d|g>, d_up = <g|d|e>
-        up = np.array([d_down(self.medium_atom, 0, mi) for mi in m])
-        down = np.array([d_up(self.medium_atom, 0, mi) for mi in m])
 
-        for i in range(len(m)):
-            for j in range(len(m)):
-                di[:, :, i, j] = np.dot(g @ up[i], down[j]) * d1
-                outer = np.outer(up[i], down[j])
-                for k in range(3):
-                    for l in range(3):
-                        di[:, :, i, j] += outer[k, l] * x[k] * x[l] * d2
+        # d_down = <e|d|g>, d_up = <g|d|e>
+        d_a = np.array([d_down(self.medium_atom, 0, mi) for mi in m])
+        d_b = np.array([d_up(self.medium_atom, 0, mi) for mi in m])
 
         # (atom a, atom b, state m, state n) -> ((a, m), (b, n)).
+        di = np.einsum("mi,nj,ijab->abmn", d_a, d_b, D)
         self.sigma = reshape_to_matrix(di)
-
 
     def get_resolvent_for_v(self, omega):
         """Return the medium resolvent in inverse-energy units."""
         atom = self.medium_atom
         return np.linalg.inv(HBAR * (omega - atom.omega + 1j * atom.gamma / 2) * np.eye(len(self.sigma)) - self.sigma)
-
 
     def get_sigma_outside(self, model: GeneralModel, resolvent):
         """
@@ -86,9 +75,12 @@ class MarkovianSigmaMatrixForV(SigmaMatrix):
         m = atom.m
         k_medium = self.wavenumber
 
-        x = np.zeros((3, nat), dtype='complex128')
-        x[0], x[1], rr = model.calculate_distances_to_reference_atom()
-        x[2] = -np.conj(x[0])
+        xm, x0, rr = model.calculate_distances_to_reference_atom()
+
+        x = np.zeros((3, nat), dtype="complex128")
+        x[0] = xm
+        x[1] = x0
+        x[2] = -np.conj(xm)
 
         g = np.array([[0, 0, -1], [0, 1, 0], [-1, 0, 0]])
 
@@ -97,36 +89,30 @@ class MarkovianSigmaMatrixForV(SigmaMatrix):
         d2 = -1 * ((DDI * 3 - 3 * 1j * k_medium * rr - (k_medium * rr) ** 2)
                    / (rr ** 3) * np.exp(1j * k_medium * rr))
 
+        outer1 = np.einsum("ij,a->ija", g, d1)
+        outer2 = np.einsum("ia,ja->ija", x, x) * d2
+        D = outer1 + outer2
+
         mV = [-1, 0, 1]
-
-        # db: signal -> medium; dc: medium -> signal.
-        db = reshape_to_blocks(np.zeros((nat * len(mV), len(m)), dtype=complex), len(mV), len(m))
-        dc = reshape_to_blocks(np.zeros((len(m), nat * len(mV)), dtype=complex),len(m), len(mV))
-
-        up_c = np.zeros((len(m0), len(m), 3), dtype=complex)
-        down_c = np.array([d_up(self.medium_atom, 0, mi) for mi in mV])
-
-        down_b = np.zeros((len(m0), len(m), 3), dtype=complex)
-        up_b = np.array([d_down(self.medium_atom, 0, mi) for mi in mV])
+        d_b1 = np.array([d_up(self.medium_atom, 0, mi) for mi in mV])
+        d_a2 = np.array([d_down(self.medium_atom, 0, mi) for mi in mV])
 
         sigma_out = -1j * HBAR * atom.gamma / 2 * np.identity(len(m))
 
+        # Sum independent intermediate signal-ground channels.
         for i in range(len(m0)):
-            for j in range(len(m)):
-                up_c[i, j] = d_down(atom, m0[i], m[j])
-                down_b[i, j] = d_up(atom, m0[i], m[j])
+            d_a1 = np.array([d_down(atom, m0[i], mi) for mi in m])
+            d_b2 = np.array([d_up(atom, m0[i], mi) for mi in m])
 
-                for k in range(len(mV)):
-                    dc[:, :, j, k] = np.dot(g @ up_c[i, j], down_c[k]) * d1
-                    db[:, 0, k, j] = np.dot(g @ up_b[k], down_b[i, j]) * d1
+            # di_1: (atom, signal state, medium state).
+            # di_2: (atom, medium state, signal state).
+            di_1 = np.einsum("mi,nj,ija->amn", d_a1, d_b1, D)
+            di_2 = np.einsum("mi,nj,ija->amn", d_a2, d_b2, D)
 
-                    outerc = np.outer(up_c[i, j], down_c[k])
-                    outerb = np.outer(up_b[k], down_b[i, j])
-                    for q in range(3):
-                        for p in range(3):
-                            dc[:, :, j, k] += outerc[q, p] * x[q] * x[p] * d2
-                            db[:, 0, k, j] += outerb[q, p] * x[q] * x[p] * d2
+            # c: medium -> signal; b: signal -> medium.
+            c = di_1.transpose(1, 0, 2).reshape(len(m), nat * len(mV))
+            b = di_2.reshape(nat * len(mV), len(m))
 
-            sigma_out += (reshape_to_matrix(dc) @ resolvent @ reshape_to_matrix(db))
+            sigma_out += c @ resolvent @ b
 
         return sigma_out

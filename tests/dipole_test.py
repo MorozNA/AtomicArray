@@ -1,6 +1,7 @@
 import numpy as np
-from src.radiative_shift import d_up, d_down, d_up_v, d_down_v
-from src.radiative_shift.dyson_solvers.param import KV, HBAR, GAMMA
+from src.radiative_shift import d_up, d_down
+from src.radiative_shift.atomspecies import AtomSpecies
+from src.radiative_shift.constants import HBAR
 
 # Define Rb 87 D-2 line transition parameters
 F0 = 1
@@ -9,15 +10,19 @@ J0 = 1 / 2
 J = 3 / 2
 I = 3 / 2
 
-# Calculate dipole matrix elements for kv = KV, M0 = 0, M = -1, 0, 1 using vector spherical harmonics
-dm1_v = d_up_v(KV, 0, -1)
-d0_v = d_up_v(KV, 0, 0)
-d1_v = d_up_v(KV, 0, 1)
+atom = AtomSpecies(F0=F0, F=F, J0=J0, J=J, I=I, lambda_nm=780, gamma=38.11e6)
+v_atom = AtomSpecies(F0=0, F=1, J0=0, J=1, I=0, lambda_nm=780, gamma=atom.gamma)
+KV, GAMMA = atom.wavenumber, atom.gamma
+
+# The general dipole functions also handle the V transition.
+dm1_v = d_up(v_atom, 0, -1)
+d0_v = d_up(v_atom, 0, 0)
+d1_v = d_up(v_atom, 0, 1)
 
 # Calculate dipole matrix elements for M0 = -1, 0, 1 using Wigner-Eckart theorem
-dm1 = d_up(-1, 0, F0, F, J0, J, I)
-d0 = d_up(0, 0, F0, F, J0, J, I)
-d1 = d_up(1, 0, F0, F, J0, J, I)
+dm1 = d_up(atom, -1, 0)
+d0 = d_up(atom, 0, 0)
+d1 = d_up(atom, 1, 0)
 
 # Print dipole matrix elements
 print(f"Dipole matrix element for kv = KV, M0 = 0, M = -1: {dm1_v}")
@@ -36,21 +41,24 @@ a0 = 0.5292e-8  # Bohr radius in cm
 # Calculate reduced matrix element for Rb 87 transition from Steck
 rb_reduced = 4.227
 
-# TODO: add formula
 # Calculate reduced matrix element for Rb 87 transition using formula
-rb_reduced_calculated = np.sqrt(3 * HBAR * GAMMA / (KV ** 3)) * np.sqrt(2 * J0 + 1) / np.sqrt(2 * J + 1) / e / a0
+rb_reduced_calculated = np.sqrt(3 * HBAR * GAMMA * (2 * J + 1) / (4 * KV ** 3)) / np.sqrt(2 * J0 + 1) / e / a0
 
 print(rb_reduced)
 print(rb_reduced_calculated)
 
 print(np.allclose(rb_reduced, rb_reduced_calculated, rtol=1e-03))
+np.testing.assert_allclose(rb_reduced, rb_reduced_calculated, rtol=1e-03)
 
 print('\n')
 print('\n')
 g = np.array([[0, 0, -1], [0, 1, 0], [-1, 0, 0]])
 m = [-1, 0, 1]
-u = np.array([d_up_v(KV, 0, mi) for mi in m])
-v = np.array([d_down_v(KV, 0, mi) for mi in m])
+u = np.array([d_up(v_atom, 0, mi) for mi in m])
+v = np.array([d_down(v_atom, 0, mi) for mi in m])
+d_unit = np.sqrt(3 * HBAR * GAMMA / (4 * KV ** 3))
+np.testing.assert_allclose(u / d_unit, -np.eye(3), atol=1e-14)
+np.testing.assert_allclose(v / d_unit, u.conj() @ g / d_unit, atol=1e-14)
 print(np.shape(u))
 print(u[0])
 print(v[0])

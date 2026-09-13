@@ -1,14 +1,16 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from src.radiative_shift import DisorderedModel
+from src.radiative_shift.atomspecies import AtomSpecies
 
 
-l = 1.0 * 2 * np.pi * (780e-7 / 2 / np.pi)
-r = 200 / 780 * 2 * np.pi * (780e-7 / 2 / np.pi)
-n0 = 10
-density = n0 / (780e-7 / 2 / np.pi) ** 3
+atom = AtomSpecies(F0=0, F=1, J0=0, J=1, I=0, lambda_nm=780, gamma=38.11e6)
+l = 1.0 * 2 * np.pi * atom.lbar
+r = 200 / 780 * 2 * np.pi * atom.lbar
+n0 = 20
+density = n0 / atom.lbar ** 3
 
-test = DisorderedModel(l, r, density)
+test = DisorderedModel(l, r, density, atom, atom)
 
 x = test.x
 y = test.y

@@ -1,53 +1,60 @@
 from dataclasses import replace
-from src.radiative_shift import MarkovianSigmaMatrixForV
-from src.radiative_shift import HexagonModel
+import numpy as np
 from src.radiative_shift.atomspecies import AtomSpecies
 from src.radiative_shift.constants import HBAR, C
 from src.radiative_shift.tools import find_kd
-import numpy as np
+from src.radiative_shift import MarkovianSigmaMatrixForV
+from src.radiative_shift import HexagonModel
+from tqdm import tqdm
 
 import time
 start_time = time.time()
 
+# 133Cs parameters are F0=4, F=5, J0=1/2, J=3/2, I=7/2
+# 87Rb parameters are F0=1, F=0, J0=1/2, J=3/2, I=3/2
+F0, F, J0, J, I = 1, 0, 1/2, 3/2, 3/2
+
 L = 2
 DEN = 20
-N_REFR = 1.45
+N_refr = 1.45
 
-reference_atom = AtomSpecies(F0=1, F=0, J0=1/2, J=3/2, I=3/2, lambda_nm=780, gamma=38.11e6)
+reference_atom = AtomSpecies(F0=F0, F=F, J0=J0, J=J, I=I, lambda_nm=780, gamma=38.11e6)
 medium_atom = AtomSpecies(F0=0, F=1, J0=0, J=1, I=0, lambda_nm=780, gamma=reference_atom.gamma)
 LBAR, KV = reference_atom.lbar, reference_atom.wavenumber
 GAMMA, OM = reference_atom.gamma, reference_atom.omega
-m = reference_atom.m
 
 l = L * 2 * np.pi * LBAR
-r = 200 / 780 * 2 * np.pi * LBAR
+r = 200e-7
 density = DEN * KV ** 3
 model = HexagonModel(l, r, density, medium_atom, reference_atom)
-model.set_reference_position_cylindrical(reference_atom, r)
+print(len(model.x))
+print(model.properties.length / 2 / np.pi)
+print(model.properties.width * LBAR * 1e7)
+# model.rotate_about_z(np.pi/6)
 
-# Calibrate the medium using the actual lattice density, not the requested one.
-detuning = find_kd(N_REFR, model.properties.density)
+model.set_reference_position_cylindrical(reference_atom, 1.0 * r)
+# The solvers still use the old distance-method name.
+model.calculate_distances_to_signal_atom = model.calculate_distances_to_reference_atom
+detuning = find_kd(N_refr, model.properties.density)
 medium_omega = OM - detuning * medium_atom.gamma
 model.medium_atom = replace(medium_atom, lambda_nm=2 * np.pi * C / medium_omega * 1e7)
 model._refresh_properties()
-print(f"{len(model.x)} medium atoms; detuning = {detuning:.6f} gamma", flush=True)
 
 sigma_v = MarkovianSigmaMatrixForV(model)
 resolvent = sigma_v.get_resolvent_for_v(OM)
 
-x = np.linspace(1.0, 5.0, 50)
-y = np.zeros((len(m), len(x)), dtype=complex)
+x = np.linspace(1.0, 5.0, 30)
+y = np.zeros((len(reference_atom.m), len(x)), dtype=complex)
 
-for i in range(len(x)):
+for i in tqdm(range(len(x))):
     radius = r * x[i]
     model.set_reference_position_cylindrical(reference_atom, radius)
     s = sigma_v.get_sigma_outside(model, resolvent)
     eigs, eigv = np.linalg.eig(s)
     y[:, i] = eigs[:]
 
-y = y / (HBAR * GAMMA)
-if not np.isfinite(y).all():
-    raise RuntimeError("The self-energy calculation produced non-finite values")
+y = y / HBAR / GAMMA
+np.savetxt('./data/fig2.txt', y, fmt='%f')
 print("--- %s seconds ---" % (time.time() - start_time))
 
 import matplotlib as mpl
@@ -61,16 +68,15 @@ mpl.rcParams['axes.titlesize'] = 10
 mpl.rcParams['font.size'] = 12
 # mpl.pyplot.title(r'ABC123 vs $\mathrm{ABC123}^{123}$')
 
-L = 2
 color = ['violet', 'purple', 'darkblue', 'blue', 'cyan', 'darkgreen', 'lime', 'yellow', 'orange', 'red', 'maroon']
 label = ['1', '2', '3', '4']
 
-fig, ax = plt.subplots(figsize=(12, 6))
+fig, ax = plt.subplots(1, figsize=(12, 6))
 
 # Figure 1 ____________________________________________
 
 x = np.linspace(1.0, 5.0, len(y[0]))
-ax.plot(x, -np.imag(y[0, :]) * 2, linestyle='solid', color=color[3], label='Microscopic (matrix)')
+ax.plot(x, -np.imag(y[0, :]) * 2, linestyle='solid', color=color[3], label='Microscopic approach')
 
 # Labels
 ax.set_ylabel(r'$\gamma (r) / \gamma_0$', fontsize=20)
@@ -95,16 +101,18 @@ ax.xaxis.set_ticks_position('bottom')
 # Labels
 ax.set_xlabel(r'$r / a$', fontsize=20)
 
-# Axis limits
-ax.set_xlim(1.0, 4.0)
+# BOTH FIGURES ___________________________________
 
-ax.set_ylim(1.0 - 0.1, 1.65)
+# Axis limits
+ax.set_xlim(1.1, 4.0)
+
+ax.set_ylim(1.0 - 0.1, 1.6)
 
 # Remove weird formatter (+1e2 etc.)
 ax.get_yaxis().get_major_formatter().set_useOffset(False)
 
 # Title
-plt.suptitle(rf"$^{{87}}$Rb,  $L = {L}\lambda$, $n_0\bar\lambda^3 = {DEN}$", fontsize=14)
+plt.suptitle(r'$^{0}$Rb,  $L = $ {1} $\lambda$, $n_0 \bar\lambda^3 =$ {2}'.format('{87}', L, DEN), fontsize=14)
 
 lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
 lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
@@ -133,4 +141,10 @@ ax.plot(np.linspace(1, 5, len(vpgreen_y)), vpgreen_y, color='green',
 # Legend
 ax.legend(fontsize=16, ncol=1, handleheight=2.4, labelspacing=0.05)
 
+
+plt.show()
+
+plt.plot(x, np.real(y[0, :]))
+plt.xlim(1, 5)
+plt.ylim(-0.03, 0.02)
 plt.show()

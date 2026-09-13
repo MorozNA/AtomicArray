@@ -3,34 +3,38 @@ import matplotlib.pyplot as plt
 import numpy as np
 from src.radiative_shift import DisorderedComb
 from src.radiative_shift import CubicComb
-from src.radiative_shift.dyson_solvers.param import LBAR
+from src.radiative_shift.atomspecies import AtomSpecies
 
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
-period = 852e-7 / 2 / LBAR
+atom = AtomSpecies(F0=0, F=1, J0=0, J=1, I=0, lambda_nm=780, gamma=38.11e6)
+LBAR = atom.lbar
+
+period = 852e-7 / 2  # cm
 a = period
 height = 0.5 * a
 width = 0.5 * a
 length_etched = 1.5 * a
 length = period * 5
 n0 = 20
-density = n0  # / (852e-7 / 2 / np.pi) ** 3
+density = n0 / LBAR ** 3  # cm^-3
 
 print(int(length / period))
 print(round(length / period))
 
 num_etched = int(length / period)
-num_atoms = int(length * height * width * density) + int(num_etched * (length_etched * height * (period / 2) * density))
+num_atoms = round(length * height * width * density) + num_etched * round(length_etched * height * (period / 2) * density)
 print(num_atoms)
 
-test = DisorderedComb(length, period, density)
+test = DisorderedComb(length, period, density, atom, atom)
+assert len(test.x) == num_atoms
 num_etched = int(length / period)
 V = (length * height * width + num_etched * (length_etched * height * (period / 2)))
-n0_after = len(test.x) / V * (852e-7 / 2 / np.pi) ** 3
+n0_after = len(test.x) / V * LBAR ** 3
 print(n0_after)
 
-test.add_atom(0.25 * 200e-7)
+test.add_medium_atom_cylindrical(0.25 * 200e-7)
 # test.replace_atom_z(0.25*length)
 
 x = test.x
@@ -80,5 +84,6 @@ plt.show()
 
 print(width / length)
 plt.plot(test.z[:-1] / period, test.x[:-1] / period, '.')
-plt.xlabel('x / a')
+plt.xlabel('z / a')
+plt.ylabel('x / a')
 plt.show()

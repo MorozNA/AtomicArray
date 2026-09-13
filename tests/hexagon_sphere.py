@@ -2,16 +2,18 @@ import logging
 import matplotlib.pyplot as plt
 from src.radiative_shift import HexagonSphere
 import numpy as np
-from src.radiative_shift.dyson_solvers.param import LBAR, KV
+from src.radiative_shift.atomspecies import AtomSpecies
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
 R = 250
 DEN = 20
 
+atom = AtomSpecies(F0=0, F=1, J0=0, J=1, I=0, lambda_nm=780, gamma=38.11e6)
+LBAR, KV = atom.lbar, atom.wavenumber
 r = R / 780 * 2 * np.pi * LBAR
 density = DEN * KV ** 3
-test = HexagonSphere(r, density)
+test = HexagonSphere(r, density, atom, atom)
 
 x = test.x
 y = test.y
@@ -22,7 +24,7 @@ ax = plt.axes(projection='3d')
 ax.scatter3D(x, y, z)
 plt.show()
 
-# ax, ay, az = test.getDistances()  # Возвращает 4 матрицы np.array
+# ax, ay, az = test.calculate_distances()  # Returns 3 numpy arrays.
 # print(ax)
 
 # Testing density

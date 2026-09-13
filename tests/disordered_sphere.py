@@ -2,15 +2,17 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from src.radiative_shift import DisorderedSphere
-from src.radiative_shift.dyson_solvers.param import LBAR
+from src.radiative_shift.atomspecies import AtomSpecies
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
-density = 10
-radius = 200e-7 / LBAR
+atom = AtomSpecies(F0=0, F=1, J0=0, J=1, I=0, lambda_nm=780, gamma=38.11e6)
+LBAR = atom.lbar
+density = 20 / LBAR ** 3
+radius = 200e-7
 n = int(density * 4 / 3 * np.pi * radius ** 3)
 
-test = DisorderedSphere(density, radius)
+test = DisorderedSphere(density, radius, atom, atom)
 
 x = test.x
 y = test.y
@@ -34,21 +36,23 @@ plt.show()
 rx, rz, rr = test.calculate_distances()
 counter = []
 lfactor = density ** (-1/3) / 2
-# В цикле повторяю всё из метода removeDuplicates, но через матрицу расстояний
+# Keep the first atom in each nearby pair, as remove_near_duplicates does.
 for i in range(n):
-    for j in range(n):
-        if i != j and rr[i][j] < lfactor:
+    for j in range(i):
+        if j not in counter and rr[i][j] < lfactor:
             counter.append(i)
-            continue
+            break
 
 
-test.remove_duplicates(lfactor)
+test.remove_near_duplicates(lfactor / LBAR)
 x = test.x
 y = test.y
 z = test.z
 
-# Здесь проверяю совпадают ли результаты удаления точек
+# Check whether results agree
 assert len(x) == n - len(set(counter))
+_, _, rr = test.calculate_distances()
+assert np.all(rr[np.triu_indices(len(x), k=1)] >= lfactor)
 
 plt.scatter(x, y, s=3)
 plt.axis('square')

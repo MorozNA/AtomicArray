@@ -1,26 +1,34 @@
 import numpy as np
 from src.radiative_shift import EmptyModel
 from src.radiative_shift import MarkovianSigmaMatrixForV
-from src.radiative_shift.dyson_solvers.param import LBAR, C, GAMMA, KV
+from src.radiative_shift.atomspecies import AtomSpecies
+from src.radiative_shift.constants import C
+from src.radiative_shift.tools import d_up
 
 
-# TODO: Check whether anything changes if Gamma(V) = Gamma(\Lambda) / 3
+atom = AtomSpecies(F0=0, F=1, J0=0, J=1, I=0, lambda_nm=780, gamma=38.11e6)
+LBAR, GAMMA = atom.lbar, atom.gamma
+
 
 def calc_tsc(x1, x2):
-    model = EmptyModel()
+    model = EmptyModel(atom, atom)
 
     model.add_atom_xyz(x1[0], x1[1], x1[2])
     model.add_atom_xyz(x2[0], x2[1], x2[2])
-    # TODO: resolve problem with measure_properties() after atom addition of new atoms
-    model.measure_properties()
 
-    sigma_v = MarkovianSigmaMatrixForV(model, KV)
+    sigma_v = MarkovianSigmaMatrixForV(model)
 
     x = np.linspace(-15, 15, 1000)
     tcs = []
-    e1 = np.array([1, 0, 0])
+    e1 = np.array([1, 0, -1]) / np.sqrt(2)  # x polarization in spherical components
+    de1 = np.array([np.vdot(d_up(atom, 0, mi), e1) for mi in atom.m])
+    positions = np.column_stack((model.x, model.y, model.z))
     for i in x:
-        omega = sigma_v.kd * C + i * GAMMA
+        omega = atom.omega + i * GAMMA
         k1 = omega / C * np.array([0, 0, 1])
-        tcs.append(sigma_v.total_cs(k1, e1, omega, model) / (LBAR ** 2))
+        drive = np.outer(np.exp(1j * (positions @ k1)), de1).ravel()
+        resolvent = sigma_v.get_resolvent_for_v(omega)
+        # Optical theorem; the current resolvent already has inverse-energy units.
+        tcs.append(-4 * np.pi * np.linalg.norm(k1)
+                   * np.imag(np.vdot(drive, resolvent @ drive)) / LBAR ** 2)
     return tcs

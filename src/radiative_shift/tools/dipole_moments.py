@@ -1,50 +1,43 @@
 import numpy as np
 from sympy.physics.wigner import wigner_3j
 from sympy.physics.wigner import wigner_6j
-# from sympy.physics.quantum.cg import CG
-from src.radiative_shift.dyson_solvers.param import HBAR, GAMMA, KV
+from src.radiative_shift.atomspecies import AtomSpecies
+from src.radiative_shift.constants import HBAR
 
 
 # 133Cs parameters are F0=4, F=5, J0=1/2, J=3/2, I=7/2
 # 87Rb parameters are F0=1, F=0, J0=1/2, J=3/2, I=3/2
-def d_up(M0, M, F0=4, F=5, J0=1 / 2, J=3 / 2, I=7 / 2):
+
+
+def d_up(atom: AtomSpecies, M0, M, k=None):
     """
-    Calculates the dipole matrix element <J0,M0|q|J,M> using the Wigner-Eckart theorem.
+    Return contravariant spherical components of <F0,M0|d|F,M>.
 
-    Arguments:
-    M0 (float): The magnetic quantum number for the ground state.
-    M (float): The magnetic quantum number for the excited state.
-    F0 (float, optional): The hyperfine quantum number for the ground state.
-    F (float, optional): The hyperfine quantum number for the excited state.
-    J0 (float, optional): The total angular momentum for the ground state.
-    J (float, optional): The total angular momentum for the excited state.
-    I (float, optional): The nuclear spin.
-
-    Returns:
-    numpy.ndarray: The contravariant spherical components of the dipole operator for chosen transition.
+    Component order is (-1, 0, +1);
+    dipole units are Gaussian CGS;
+    F0 and F are ground/excited hyperfine angular momenta;
+    J0 and J are ground/excited electronic angular momenta;
+    I is the nuclear spin;
+    M0 and M are magnetic quantum numbers.
+    k is atomic wavenumber
     """
-    q = [-1, 0, 1]
-    j3 = np.array([wigner_3j(F, 1, F0, M, q[i], -M0) for i in range(3)])
-    j6 = wigner_6j(J0, J, 1, F, F0, I)
-    d_vec = (-1) ** (J0 + M0 + I) * np.sqrt((2 * F0 + 1) * (2 * F + 1)) * j6 * j3
-    reduced_up = np.sqrt(3 * HBAR * GAMMA / 4 / (KV ** 3)) * np.sqrt(2 * J + 1)
-    return np.array([-d_vec[2], d_vec[1], -d_vec[0]], dtype=np.complex) * reduced_up
+
+    if k is None:
+        k = atom.wavenumber
+    F0, F, J0, J, I = atom.F0, atom.F, atom.J0, atom.J, atom.I
+    j3 = np.array([wigner_3j(F, 1, F0, M, q, -M0) for q in (-1, 0, 1)], dtype=complex)
+    j6 = float(wigner_6j(J0, J, 1, F, F0, I))
+
+    phase = (-1.0) ** (2 * F + J0 + M0 + I)
+    d_vec = phase * np.sqrt((2 * F0 + 1) * (2 * F + 1)) * j6 * j3
+
+    reduced_up = np.sqrt(3 * HBAR * atom.gamma * (2 * J + 1) / (4 * k**3))
+
+    # Raise the spherical index: d^q = (-1)^q d_{-q}.
+    return np.array([-d_vec[2], d_vec[1], -d_vec[0]]) * reduced_up
 
 
-def d_down(M0, M, F0=4, F=5, J0=1 / 2, J=3 / 2, I=7 / 2):
-    d_vec = d_up(M0, M, F0, F, J0, J, I)
-    return np.array([-d_vec[2], d_vec[1], -d_vec[0]], dtype=np.complex)
-
-
-def d_up_v(k, M0, M):
-    J0, J = 0, 1
-    q = [-1, 0, 1]
-    j3 = np.array([wigner_3j(J, 1, J0, M, q[i], -M0) for i in range(3)], dtype=np.complex)
-    d_vec = (-1) ** (J - 1 + M0) * j3
-    reduced_v = np.sqrt(3 * HBAR * GAMMA / 4 / (k ** 3)) * np.sqrt(2 * J + 1)
-    return np.array([-d_vec[2], d_vec[1], -d_vec[0]], dtype=np.complex) * reduced_v
-
-
-def d_down_v(k, M0, M):
-    d_vec = d_up_v(k, M0, M)
-    return np.array([-d_vec[2], d_vec[1], -d_vec[0]], dtype=np.complex)
+def d_down(atom: AtomSpecies, M0, M, k=None):
+    """Return the reverse transition in the same spherical convention."""
+    d_vec = d_up(atom, M0, M, k)
+    return np.array([-d_vec[2], d_vec[1], -d_vec[0]]).conj()

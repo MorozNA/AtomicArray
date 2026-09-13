@@ -1,11 +1,15 @@
 import numpy as np
 from .general import GeneralModel
+from src.radiative_shift.atomspecies import AtomSpecies
 
 class CubicComb(GeneralModel):
 
     # TODO: parameters should be changed to -> number of etches, period, density
-    def __init__(self, length, period, density):
+    def __init__(self, length, period, density, medium_atom: AtomSpecies, reference_atom: AtomSpecies):
         super().__init__()
+        self.medium_atom = medium_atom
+        self.reference_atom = reference_atom
+
         a = density ** (- 1 / 3)
         b = 0.5 * period
         r = b % a / int(b / a)
@@ -71,13 +75,19 @@ class CubicComb(GeneralModel):
         self.y = self.y - height / 2
         self.x = -self.x
 
-        # self.remove_duplicates(unitsize / 5)
-        self.measure_properties()
+        # self.remove_near_duplicates(unitsize / 5)
+        self._refresh_properties()
+        V = (length * height * width + num_etched * (length_etched * height * width))
+        self.properties.density = len(self.x) / (V / (self.medium_atom.lbar ** 3 ** 3))
         self.write_log()
 
-    def measure_properties(self):
+    def _refresh_properties(self):
         # TODO: maybe add another property: height
-        self.properties.radius = np.amax(abs(self.x))
-        self.properties.length = np.amax(self.z)  # / LBAR
-        self.properties.noa = len(self.x)
-        self.properties.density = len(self.x) / self.properties.length / self.properties.radius ** 2 / np.pi
+        self.properties.width = np.amax(abs(self.x))
+        self.properties.length = np.amax(self.z)
+        self.properties.n_atoms = len(self.x)
+        self.properties.density = len(self.x) / self.properties.length / self.properties.width ** 2 / np.pi
+
+        self.properties.width /= self.medium_atom.lbar
+        self.properties.length /= self.medium_atom.lbar
+        self.properties.density *= self.medium_atom.lbar ** 3
