@@ -1,10 +1,10 @@
 from dataclasses import replace
 import numpy as np
-from src.radiative_shift import MarkovianSigmaMatrixForV
+from src.radiative_shift import VMediumSelfEnergyMatrix
 from src.radiative_shift import CubicComb
 from src.radiative_shift.atomspecies import AtomSpecies
 from src.radiative_shift.constants import HBAR, C
-from src.radiative_shift.tools import find_kd
+from src.radiative_shift.tools import find_reference_detuning
 from draw import draw
 from tqdm import tqdm
 
@@ -39,17 +39,15 @@ print(len(model.x))
 print(len(model.x) / V * LBAR ** 3)
 
 # Use the comb volume already calculated above for the actual density.
-detuning = find_kd(N_refr, len(model.x) / V * LBAR ** 3)
+detuning = find_reference_detuning(N_refr, len(model.x) / V * LBAR ** 3)
 medium_omega = OM - detuning * medium_atom.gamma
 model.medium_atom = replace(medium_atom, lambda_nm=2 * np.pi * C / medium_omega * 1e7)
 model._refresh_properties()
-# The solvers still use the old distance-method name.
-model.calculate_distances_to_signal_atom = model.calculate_distances_to_reference_atom
 
 # Quantize along the original x axis.
 model.rotate_about_y(-np.pi/2)
-sigma = MarkovianSigmaMatrixForV(model)
-resolvent = sigma.get_resolvent_for_v(OM)
+sigma = VMediumSelfEnergyMatrix(model)
+resolvent = sigma.get_medium_resolvent(OM)
 model.rotate_about_y(np.pi/2)
 
 model.set_reference_position_cylindrical(reference_atom)
@@ -61,7 +59,7 @@ for i in range(len(x)):
     model.set_reference_position_cylindrical(reference_atom, 200e-7 * x[i])
 
     model.rotate_about_y(-np.pi/2)
-    s = sigma.get_sigma_outside(model, resolvent)
+    s = sigma.get_reference_self_energy(model, resolvent)
     model.rotate_about_y(np.pi/2)
 
     eigs_temp, eigv_temp = np.linalg.eig(s)

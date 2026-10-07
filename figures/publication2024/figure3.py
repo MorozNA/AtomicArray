@@ -1,10 +1,10 @@
 from dataclasses import replace
 import numpy as np
-from src.radiative_shift import MarkovianSigmaMatrixForV
+from src.radiative_shift import VMediumSelfEnergyMatrix
 from src.radiative_shift import HexagonModel
 from src.radiative_shift.atomspecies import AtomSpecies
 from src.radiative_shift.constants import HBAR, C
-from src.radiative_shift.tools import find_kd
+from src.radiative_shift.tools import find_reference_detuning
 from draw import draw
 from tqdm import tqdm
 
@@ -27,17 +27,15 @@ density = DEN * KV ** 3
 
 model = HexagonModel(l, r, density, medium_atom, reference_atom)
 model.set_reference_position_cylindrical(reference_atom, 1.0 * r)
-# The solvers still use the old distance-method name.
-model.calculate_distances_to_signal_atom = model.calculate_distances_to_reference_atom
-detuning = find_kd(N_refr, model.properties.density)
+detuning = find_reference_detuning(N_refr, model.properties.density)
 medium_omega = OM - detuning * medium_atom.gamma
 model.medium_atom = replace(medium_atom, lambda_nm=2 * np.pi * C / medium_omega * 1e7)
 model._refresh_properties()
 
 # Quantize along the original x axis.
 model.rotate_about_y(-np.pi/2)
-sigma = MarkovianSigmaMatrixForV(model)
-resolvent = sigma.get_resolvent_for_v(OM)
+sigma = VMediumSelfEnergyMatrix(model)
+resolvent = sigma.get_medium_resolvent(OM)
 
 
 x = np.linspace(1.0, 5.0, 50)
@@ -48,7 +46,7 @@ for i in tqdm(range(len(x))):
     model.set_reference_position_cylindrical(reference_atom, r * x[i])
     model.rotate_about_y(-np.pi/2)
 
-    s = sigma.get_sigma_outside(model, resolvent)
+    s = sigma.get_reference_self_energy(model, resolvent)
     eigs_temp, eigv_temp = np.linalg.eig(s)
 
     eigv2 = np.zeros([len(reference_atom.m), len(reference_atom.m)], dtype=complex)

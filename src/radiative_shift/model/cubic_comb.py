@@ -76,9 +76,8 @@ class CubicComb(GeneralModel):
         self.x = -self.x
 
         # self.remove_near_duplicates(unitsize / 5)
+        self._volume = (length * height * width + num_etched * (length_etched * height * width))
         self._refresh_properties()
-        V = (length * height * width + num_etched * (length_etched * height * width))
-        self.properties.density = len(self.x) / (V / (self.medium_atom.lbar ** 3 ** 3))
         self.write_log()
 
     def _refresh_properties(self):
@@ -86,7 +85,7 @@ class CubicComb(GeneralModel):
         self.properties.width = np.amax(abs(self.x))
         self.properties.length = np.amax(self.z)
         self.properties.n_atoms = len(self.x)
-        self.properties.density = len(self.x) / self.properties.length / self.properties.width ** 2 / np.pi
+        self.properties.density = len(self.x) / self._volume
 
         self.properties.width /= self.medium_atom.lbar
         self.properties.length /= self.medium_atom.lbar

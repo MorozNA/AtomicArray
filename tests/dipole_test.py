@@ -1,5 +1,5 @@
 import numpy as np
-from src.radiative_shift import d_up, d_down
+from src.radiative_shift import dipole_mn, dipole_nm
 from src.radiative_shift.atomspecies import AtomSpecies
 from src.radiative_shift.constants import HBAR
 
@@ -15,14 +15,14 @@ v_atom = AtomSpecies(F0=0, F=1, J0=0, J=1, I=0, lambda_nm=780, gamma=atom.gamma)
 KV, GAMMA = atom.wavenumber, atom.gamma
 
 # The general dipole functions also handle the V transition.
-dm1_v = d_up(v_atom, 0, -1)
-d0_v = d_up(v_atom, 0, 0)
-d1_v = d_up(v_atom, 0, 1)
+dm1_v = dipole_mn(v_atom, 0, -1)
+d0_v = dipole_mn(v_atom, 0, 0)
+d1_v = dipole_mn(v_atom, 0, 1)
 
 # Calculate dipole matrix elements for M0 = -1, 0, 1 using Wigner-Eckart theorem
-dm1 = d_up(atom, -1, 0)
-d0 = d_up(atom, 0, 0)
-d1 = d_up(atom, 1, 0)
+dm1 = dipole_mn(atom, -1, 0)
+d0 = dipole_mn(atom, 0, 0)
+d1 = dipole_mn(atom, 1, 0)
 
 # Print dipole matrix elements
 print(f"Dipole matrix element for kv = KV, M0 = 0, M = -1: {dm1_v}")
@@ -54,8 +54,8 @@ print('\n')
 print('\n')
 g = np.array([[0, 0, -1], [0, 1, 0], [-1, 0, 0]])
 m = [-1, 0, 1]
-u = np.array([d_up(v_atom, 0, mi) for mi in m])
-v = np.array([d_down(v_atom, 0, mi) for mi in m])
+u = np.array([dipole_mn(v_atom, 0, mi) for mi in m])
+v = np.array([dipole_nm(v_atom, 0, mi) for mi in m])
 d_unit = np.sqrt(3 * HBAR * GAMMA / (4 * KV ** 3))
 np.testing.assert_allclose(u / d_unit, -np.eye(3), atol=1e-14)
 np.testing.assert_allclose(v / d_unit, u.conj() @ g / d_unit, atol=1e-14)

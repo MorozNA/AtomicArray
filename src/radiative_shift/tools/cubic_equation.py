@@ -3,7 +3,7 @@ from src.radiative_shift.atomspecies import AtomSpecies
 
 
 def solve_cubic(a, b, c, d):
-    """Return x's that solves cubic equation ax^3 + bx^2 + cx + d = 0"""
+    """Return the roots of the cubic equation ax^3 + bx^2 + cx + d = 0."""
     # https://math.stackexchange.com/questions/18867/how-does-one-solve-a-cubic-polynomial-with-complex-coefficients
     # https://math.stackexchange.com/questions/15865/why-not-write-the-solutions-of-a-cubic-this-way/18873#18873
     p = b / a
@@ -20,9 +20,12 @@ def solve_cubic(a, b, c, d):
     return x1, x2, x3
 
 
-def find_kd(n_refr, n0, atol=0.01):
-    """Return (omega_reference - omega_medium) / gamma_medium.
-    n0 is the number density in units of the reference reduced wavelength cubed.
+def find_reference_detuning(n_refr, n0, atol=0.01):
+    """Find (omega_0 - omega_M) / Gamma_e for the Appendix A permittivity.
+
+    This detuning equals -delta_M / Gamma_e
+    n_refr is the target refractive index; n0 is the dimensionless density
+    n0 * lambda0_bar**3, scaled by the reference reduced wavelength cubed
     """
     if not (np.isfinite(n_refr) and n_refr > 1 and np.isfinite(n0) and n0 > 0):
         raise ValueError("This detuning search requires n_refr > 1 and n0 > 0")
@@ -60,7 +63,14 @@ def find_kd(n_refr, n0, atol=0.01):
     return del_omega[index]
 
 
-def find_eps(n_refr, n0, omega, atom_reference: AtomSpecies):
+def medium_permittivity(n_refr, n0, omega, atom_reference: AtomSpecies):
+    """Return epsilon(omega) for the artificial medium of Appendix A.
+
+    n_refr is the target refractive index; n0 is the dimensionless density
+    n0 * lambda0_bar**3, scaled by the reference reduced wavelength cubed.
+    The frequency offset and detuning use atom_reference.gamma, corresponding
+    to the paper's choice Gamma_e = Gamma_infinity.
+    """
     # ! here n0 == n0 * LBAR ** 3
     F = 1
     F0 = 0
@@ -68,14 +78,14 @@ def find_eps(n_refr, n0, omega, atom_reference: AtomSpecies):
     alpha = 1  # (2 * F0 + 1) / 3
     ro = n0 * (2 * F + 1) / 3 / (2 * F0 + 1)
 
-    om_d = (atom_reference.omega - find_kd(n_refr, n0) * atom_reference.gamma)
-    del_omega = (omega - om_d) / atom_reference.gamma
+    omega_M = (atom_reference.omega - find_reference_detuning(n_refr, n0) * atom_reference.gamma)
+    del_omega = (omega - omega_M) / atom_reference.gamma
 
     a = 1j / 2
     b = alpha * np.pi * ro + del_omega
     c = - 1j / 2
     d = alpha * 2 * np.pi * ro - del_omega
 
-    x = solve_cubic(a, b, c, d)
-    eps = x[0] ** 2
-    return eps
+    sqrt_epsilon_roots = solve_cubic(a, b, c, d)
+    epsilon = sqrt_epsilon_roots[0] ** 2
+    return epsilon

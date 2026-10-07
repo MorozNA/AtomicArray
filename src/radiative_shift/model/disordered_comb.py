@@ -31,7 +31,7 @@ class DisorderedComb(GeneralModel):
         # TODO: change +=***.tolist() to np.append()
         for i in range(num_etched):
             z += np.random.uniform(shift + i * period, shift + i * period + width, size=n_etched).tolist()
-            x += np.random.uniform(width, length_etched, size=n_etched).tolist()
+            x += np.random.uniform(width, width + length_etched, size=n_etched).tolist()
             y += np.random.uniform(-height / 2, height / 2, size=n_etched).tolist()
 
         # Use numpy arrays instead of Python lists
@@ -39,6 +39,7 @@ class DisorderedComb(GeneralModel):
         self.y = np.array(y)
         self.z = np.array(z)
 
+        self._volume = (length * height * width + num_etched * (length_etched * height * width))
         self._refresh_properties()
         self.write_log()
 
@@ -47,7 +48,7 @@ class DisorderedComb(GeneralModel):
         self.properties.length = np.amax(self.z)
         self.properties.width = np.amax(abs(self.x))
         self.properties.n_atoms = len(self.x)
-        self.properties.density = len(self.x) / self.properties.length / self.properties.width ** 2 / np.pi
+        self.properties.density = len(self.x) / self._volume
 
         self.properties.width /= self.medium_atom.lbar
         self.properties.length /= self.medium_atom.lbar

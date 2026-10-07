@@ -1,9 +1,9 @@
 from dataclasses import replace
-from src.radiative_shift import MarkovianSigmaMatrixForV
+from src.radiative_shift import VMediumSelfEnergyMatrix
 from src.radiative_shift import HexagonModel
 from src.radiative_shift.atomspecies import AtomSpecies
 from src.radiative_shift.constants import HBAR, C
-from src.radiative_shift.tools import find_kd
+from src.radiative_shift.tools import find_reference_detuning
 import numpy as np
 
 import time
@@ -25,15 +25,15 @@ density = DEN * KV ** 3
 model = HexagonModel(l, r, density, medium_atom, reference_atom)
 model.set_reference_position_cylindrical(reference_atom, r)
 
-# Calibrate the medium using the actual lattice density, not the requested one.
-detuning = find_kd(N_REFR, model.properties.density)
+# Calibrate the medium using the actual lattice density, not the requested one
+detuning = find_reference_detuning(N_REFR, model.properties.density)
 medium_omega = OM - detuning * medium_atom.gamma
 model.medium_atom = replace(medium_atom, lambda_nm=2 * np.pi * C / medium_omega * 1e7)
 model._refresh_properties()
 print(f"{len(model.x)} medium atoms; detuning = {detuning:.6f} gamma", flush=True)
 
-sigma_v = MarkovianSigmaMatrixForV(model)
-resolvent = sigma_v.get_resolvent_for_v(OM)
+sigma_v = VMediumSelfEnergyMatrix(model)
+resolvent = sigma_v.get_medium_resolvent(OM)
 
 x = np.linspace(1.0, 5.0, 50)
 y = np.zeros((len(m), len(x)), dtype=complex)
@@ -41,7 +41,7 @@ y = np.zeros((len(m), len(x)), dtype=complex)
 for i in range(len(x)):
     radius = r * x[i]
     model.set_reference_position_cylindrical(reference_atom, radius)
-    s = sigma_v.get_sigma_outside(model, resolvent)
+    s = sigma_v.get_reference_self_energy(model, resolvent)
     eigs, eigv = np.linalg.eig(s)
     y[:, i] = eigs[:]
 

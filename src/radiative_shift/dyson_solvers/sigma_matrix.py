@@ -1,17 +1,19 @@
 import numpy as np
-from src.radiative_shift.constants import DDI, HBAR
+from src.radiative_shift.constants import HBAR
 from src.radiative_shift.model import GeneralModel
-from src.radiative_shift.tools import d_up, d_down
-from src.radiative_shift.tools import reshape_to_blocks, reshape_to_matrix
+from src.radiative_shift.tools import dipole_mn, dipole_nm
+from src.radiative_shift.tools import matrix_to_blocks, blocks_to_matrix
 from abc import ABC
 
 
-class SigmaMatrix(ABC):
+class MediumSelfEnergyMatrix(ABC):
+    """Medium pair self-energy Sigma^(ab), Eq. (2.30), in energy units."""
+
     sigma: np.array
 
 
 # TODO: get rid of the class, only leave functions
-class MarkovianSigmaMatrixForV(SigmaMatrix):
+class VMediumSelfEnergyMatrix(MediumSelfEnergyMatrix):
     """
     Self-energy matrix for a (F0=0, F=1) - atomic medium.
 
@@ -19,7 +21,7 @@ class MarkovianSigmaMatrixForV(SigmaMatrix):
     resolvent elements have units of inverse energy.
 
     The medium basis is ordered by atom. For each atom, the magnetic
-    sublevels appear in the order m = -1, 0, +1; for example:
+    sublevels appear in the order M_e = -1, 0, +1; for example:
     (atom 0, -1), (atom 0, 0), (atom 0, +1),
     (atom 1, -1), (atom 1, 0), (atom 1, +1), ...
     """
@@ -30,103 +32,138 @@ class MarkovianSigmaMatrixForV(SigmaMatrix):
             raise ValueError("The medium must be a V atom with F0=0 and F=1")
         self.wavenumber = model.reference_atom.wavenumber
 
-        xm, x0, rr = model.calculate_distances()
-        nat = len(model.x)
+        X_minus_norm, X_0_norm, R_ab = model.calculate_distances()
+        N = len(model.x)
 
-        x = np.zeros((3, len(xm), len(xm)), dtype='complex128')
-        x[0] = xm
-        x[1] = x0
-        x[2] = -np.conj(xm)
+        # Covariant spherical components X_mu/R, normalized by the model.
+        X_plus_norm = -np.conj(X_minus_norm)
+        X_ab_norm = np.array([X_minus_norm, X_0_norm, X_plus_norm], dtype='complex128')
 
-        g = np.array([[0, 0, -1], [0, 1, 0], [-1, 0, 0]])
+        spherical_metric = np.array([[0, 0, -1], [0, 1, 0], [-1, 0, 0]])
 
-        # D^(E) / HBAR from Eq. (2.23), with DDI = 1 (dipole-dipole interaction is ON)
+        # D^(E) / HBAR from Eq. (2.23)
         # Vacuum self-decay is included separately in the resolvent.
-        k_medium = self.wavenumber
+        k0 = self.wavenumber
 
-        d1 = ((DDI * 1 - 1j * k_medium * rr - (k_medium * rr) ** 2) / ((rr + np.identity(nat)) ** 3)
-                * np.exp(1j * k_medium * rr)) * (np.ones(nat) - np.identity(nat))
-        d2 = -1 * ((DDI * 3 - 3 * 1j * k_medium * rr - (k_medium * rr) ** 2) / ((rr + np.identity(nat)) ** 3)
-                * np.exp(1j * k_medium * rr)) * (np.ones(nat) - np.identity(nat))
+        # D^(E)/HBAR = D_coeff1 * spherical_metric + D_coeff2 * (X_norm outer X_norm).
+        D_coeff1 = ((1 - 1j * k0 * R_ab - (k0 * R_ab) ** 2)
+                    / ((R_ab + np.identity(N)) ** 3) * np.exp(1j * k0 * R_ab)) * (np.ones(N) - np.identity(N))
+        D_coeff2 = -1 * ((3 - 3 * 1j * k0 * R_ab - (k0 * R_ab) ** 2)
+                         / ((R_ab + np.identity(N)) ** 3) * np.exp(1j * k0 * R_ab)) * (np.ones(N) - np.identity(N))
 
-        di = np.zeros((nat, nat, 3, 3), dtype=complex)
+        medium_self_energy_blocks = np.zeros((N, N, 3, 3), dtype=complex)
 
-        m = self.medium_atom.m
+        medium_excited_sublevels = self.medium_atom.m
 
-        # d_down = <e|d|g>, d_up = <g|d|e>
-        up = np.array([d_down(self.medium_atom, 0, mi) for mi in m])
-        down = np.array([d_up(self.medium_atom, 0, mi) for mi in m])
+        # Medium dipoles f_eg = <e|d|g>, f_ge = <g|d|e>, Eq. (2.30).
+        f_eg = np.array([dipole_nm(self.medium_atom, 0, M_e) for M_e in medium_excited_sublevels])
+        f_ge = np.array([dipole_mn(self.medium_atom, 0, M_e) for M_e in medium_excited_sublevels])
 
-        for i in range(len(m)):
-            for j in range(len(m)):
-                di[:, :, i, j] = np.dot(g @ up[i], down[j]) * d1
-                outer = np.outer(up[i], down[j])
-                for k in range(3):
-                    for l in range(3):
-                        di[:, :, i, j] += outer[k, l] * x[k] * x[l] * d2
+        for e in range(len(medium_excited_sublevels)):
+            for e_prime in range(len(medium_excited_sublevels)):
+                medium_self_energy_blocks[:, :, e, e_prime] = (
+                    np.dot(spherical_metric @ f_eg[e], f_ge[e_prime])
+                    * D_coeff1
+                )
+                medium_dipole_dyad = np.outer(f_eg[e], f_ge[e_prime])
+                for mu in range(3):
+                    for nu in range(3):
+                        medium_self_energy_blocks[:, :, e, e_prime] += (
+                            medium_dipole_dyad[mu, nu] * X_ab_norm[mu] * X_ab_norm[nu]
+                            * D_coeff2
+                        )
 
-        # (atom a, atom b, state m, state n) -> ((a, m), (b, n)).
-        self.sigma = reshape_to_matrix(di)
+        # (atom a, atom b, state e, state e') -> ((a, e), (b, e')).
+        self.sigma = blocks_to_matrix(medium_self_energy_blocks)
 
 
-    def get_resolvent_for_v(self, omega):
-        """Return the medium resolvent in inverse-energy units."""
-        atom = self.medium_atom
-        return np.linalg.inv(HBAR * (omega - atom.omega + 1j * atom.gamma / 2) * np.eye(len(self.sigma)) - self.sigma)
+    def get_medium_resolvent(self, omega):
+        """Return the medium resolvent at E = HBAR*omega, in inverse energy."""
+        medium_atom = self.medium_atom
+        return np.linalg.inv(HBAR * (omega - medium_atom.omega + 1j * medium_atom.gamma / 2) * np.eye(len(self.sigma)) - self.sigma)
 
 
-    def get_sigma_outside(self, model: GeneralModel, resolvent):
+    def get_reference_self_energy(self, model: GeneralModel, resolvent):
         """
-        Return the reference atom self-energy in energy units;.
-        Omega dependence enters through resolvent, evaluated at omega.
+        Return the dressed reference self-energy of Eqs. (2.13)-(2.14).
+
+        The result is in energy units and includes vacuum decay, Eq. (2.18).
+        resolvent is the medium resolvent evaluated at the chosen omega.
         """
-        nat = len(model.x)
+        N = len(model.x)
         atom = model.reference_atom
-        m0 = atom.m0
-        m = atom.m
-        k_medium = self.wavenumber
+        m0 = atom.m0  # Reference ground sublevels.
+        m = atom.m  # Reference excited sublevels.
+        mV = [-1, 0, 1]  # Medium excited sublevels.
+        k0 = self.wavenumber
 
-        x = np.zeros((3, nat), dtype='complex128')
-        x[0], x[1], rr = model.calculate_distances_to_reference_atom()
-        x[2] = -np.conj(x[0])
+        X_minus_norm, X_0_norm, R_0a = model.calculate_distances_to_reference_atom()
+        X_plus_norm = -np.conj(X_minus_norm)
+        X_0a_norm = np.array(
+            [X_minus_norm, X_0_norm, X_plus_norm], dtype='complex128'
+        )
 
-        g = np.array([[0, 0, -1], [0, 1, 0], [-1, 0, 0]])
+        spherical_metric = np.array([[0, 0, -1], [0, 1, 0], [-1, 0, 0]])
 
-        d1 = ((DDI * 1 - 1j * k_medium * rr - (k_medium * rr) ** 2)
-              / (rr ** 3) * np.exp(1j * k_medium * rr))
-        d2 = -1 * ((DDI * 3 - 3 * 1j * k_medium * rr - (k_medium * rr) ** 2)
-                   / (rr ** 3) * np.exp(1j * k_medium * rr))
+        # D^(E)/HBAR = D_coeff1 * spherical_metric
+        #             + D_coeff2 * (X_norm outer X_norm).
+        D_coeff1 = (
+                (1 - 1j * k0 * R_0a - (k0 * R_0a) ** 2)
+                / (R_0a ** 3) * np.exp(1j * k0 * R_0a)
+        )
+        D_coeff2 = -1 * (
+                (3 - 3 * 1j * k0 * R_0a - (k0 * R_0a) ** 2)
+                / (R_0a ** 3) * np.exp(1j * k0 * R_0a)
+        )
 
-        mV = [-1, 0, 1]
+        # db: reference -> medium, Eq. (2.27).
+        # dc: medium -> reference, Eq. (2.29).
+        db = matrix_to_blocks(
+            np.zeros((N * len(mV), len(m)), dtype=complex),
+            len(mV), len(m),
+        )
+        dc = matrix_to_blocks(
+            np.zeros((len(m), N * len(mV)), dtype=complex),
+            len(m), len(mV),
+        )
 
-        # db: signal -> medium; dc: medium -> signal.
-        db = reshape_to_blocks(np.zeros((nat * len(mV), len(m)), dtype=complex), len(mV), len(m))
-        dc = reshape_to_blocks(np.zeros((len(m), nat * len(mV)), dtype=complex),len(m), len(mV))
+        d_nm = np.zeros((len(m0), len(m), 3), dtype=complex)
+        d_mn = np.zeros((len(m0), len(m), 3), dtype=complex)
 
-        up_c = np.zeros((len(m0), len(m), 3), dtype=complex)
-        down_c = np.array([d_up(self.medium_atom, 0, mi) for mi in mV])
+        f_ge = np.array([dipole_mn(self.medium_atom, 0, M_e) for M_e in mV])
+        f_eg = np.array([dipole_nm(self.medium_atom, 0, M_e) for M_e in mV])
 
-        down_b = np.zeros((len(m0), len(m), 3), dtype=complex)
-        up_b = np.array([d_down(self.medium_atom, 0, mi) for mi in mV])
+        sigma_ref = -1j * HBAR * atom.gamma / 2 * np.identity(len(m))
 
-        sigma_out = -1j * HBAR * atom.gamma / 2 * np.identity(len(m))
+        for g in range(len(m0)):
+            for e in range(len(m)):
+                d_nm[g, e] = dipole_nm(atom, m0[g], m[e])
+                d_mn[g, e] = dipole_mn(atom, m0[g], m[e])
 
-        for i in range(len(m0)):
-            for j in range(len(m)):
-                up_c[i, j] = d_down(atom, m0[i], m[j])
-                down_b[i, j] = d_up(atom, m0[i], m[j])
+                for e_prime in range(len(mV)):
+                    dc[:, :, e, e_prime] = (
+                            np.dot(spherical_metric @ d_nm[g, e], f_ge[e_prime])
+                            * D_coeff1
+                    )
+                    db[:, 0, e_prime, e] = (
+                            np.dot(spherical_metric @ f_eg[e_prime], d_mn[g, e])
+                            * D_coeff1
+                    )
 
-                for k in range(len(mV)):
-                    dc[:, :, j, k] = np.dot(g @ up_c[i, j], down_c[k]) * d1
-                    db[:, 0, k, j] = np.dot(g @ up_b[k], down_b[i, j]) * d1
+                    outer_c = np.outer(d_nm[g, e], f_ge[e_prime])
+                    outer_b = np.outer(f_eg[e_prime], d_mn[g, e])
 
-                    outerc = np.outer(up_c[i, j], down_c[k])
-                    outerb = np.outer(up_b[k], down_b[i, j])
-                    for q in range(3):
-                        for p in range(3):
-                            dc[:, :, j, k] += outerc[q, p] * x[q] * x[p] * d2
-                            db[:, 0, k, j] += outerb[q, p] * x[q] * x[p] * d2
+                    for mu in range(3):
+                        for nu in range(3):
+                            dc[:, :, e, e_prime] += (
+                                    outer_c[mu, nu] * X_0a_norm[mu]
+                                    * X_0a_norm[nu] * D_coeff2
+                            )
+                            db[:, 0, e_prime, e] += (
+                                    outer_b[mu, nu] * X_0a_norm[mu]
+                                    * X_0a_norm[nu] * D_coeff2
+                            )
 
-            sigma_out += (reshape_to_matrix(dc) @ resolvent @ reshape_to_matrix(db))
+            sigma_ref += blocks_to_matrix(dc) @ resolvent @ blocks_to_matrix(db)
 
-        return sigma_out
+        return sigma_ref

@@ -9,12 +9,13 @@ from src.radiative_shift.constants import HBAR
 # 87Rb parameters are F0=1, F=0, J0=1/2, J=3/2, I=3/2
 
 
-def d_up(atom: AtomSpecies, M0, M, k=None):
+def dipole_mn(atom: AtomSpecies, M0, M, k=None):
     """
-    Return contravariant spherical components of <F0,M0|d|F,M>.
+    Return contravariant spherical components of d_mn = <m|d|n>.
 
     Component order is (-1, 0, +1);
     dipole units are Gaussian CGS;
+    m = |F0,M0> and n = |F,M> are the ground and excited states;
     F0 and F are ground/excited hyperfine angular momenta;
     J0 and J are ground/excited electronic angular momenta;
     I is the nuclear spin;
@@ -31,13 +32,13 @@ def d_up(atom: AtomSpecies, M0, M, k=None):
     phase = (-1.0) ** (2 * F + J0 + M0 + I)
     d_vec = phase * np.sqrt((2 * F0 + 1) * (2 * F + 1)) * j6 * j3
 
-    reduced_up = np.sqrt(3 * HBAR * atom.gamma * (2 * J + 1) / (4 * k**3))
+    reduced_dipole = np.sqrt(3 * HBAR * atom.gamma * (2 * J + 1) / (4 * k**3))
 
     # Raise the spherical index: d^q = (-1)^q d_{-q}.
-    return np.array([-d_vec[2], d_vec[1], -d_vec[0]]) * reduced_up
+    return np.array([-d_vec[2], d_vec[1], -d_vec[0]]) * reduced_dipole
 
 
-def d_down(atom: AtomSpecies, M0, M, k=None):
-    """Return the reverse transition in the same spherical convention."""
-    d_vec = d_up(atom, M0, M, k)
-    return np.array([-d_vec[2], d_vec[1], -d_vec[0]]).conj()
+def dipole_nm(atom: AtomSpecies, M0, M, k=None):
+    """Return d_nm = <n|d|m> in the same contravariant spherical convention."""
+    dipole_components = dipole_mn(atom, M0, M, k)
+    return np.array([-dipole_components[2], dipole_components[1], -dipole_components[0]]).conj()

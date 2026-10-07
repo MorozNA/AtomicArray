@@ -6,8 +6,9 @@ from .model import GeneralModel
 from .model import DisorderedComb
 from .model import CubicComb
 from .model import EmptyModel
-from .dyson_solvers import MarkovianSigmaMatrixForV
-from .dyson_solvers import SigmaMatrix
-from .tools import d_up, d_down
-from .tools import find_kd
-from .tools import reshape_to_blocks, reshape_to_matrix
+from .dyson_solvers import MediumSelfEnergyMatrix
+from .dyson_solvers import VMediumSelfEnergyMatrix
+from .dyson_solvers import EinsumVMediumSelfEnergyMatrix
+from .tools import dipole_mn, dipole_nm
+from .tools import solve_cubic, find_reference_detuning, medium_permittivity
+from .tools import matrix_to_blocks, blocks_to_matrix

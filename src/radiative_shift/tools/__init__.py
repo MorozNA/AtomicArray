@@ -1,3 +1,3 @@
-from .dipole_moments import d_up, d_down
-from .cubic_equation import find_kd
-from .reshaper import reshape_to_blocks, reshape_to_matrix
+from .dipole_moments import dipole_mn, dipole_nm
+from .cubic_equation import solve_cubic, find_reference_detuning, medium_permittivity
+from .reshaper import matrix_to_blocks, blocks_to_matrix

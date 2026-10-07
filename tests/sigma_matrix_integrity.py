@@ -1,4 +1,4 @@
-from src.radiative_shift import MarkovianSigmaMatrixForV
+from src.radiative_shift import VMediumSelfEnergyMatrix
 from src.radiative_shift import HexagonSphere
 from src.radiative_shift.atomspecies import AtomSpecies
 from src.radiative_shift.constants import HBAR
@@ -18,7 +18,7 @@ for i in x:
     dens = 3 * natoms / (4 * np.pi * radius**3)
     print(f"Density = {dens * atom.lbar ** 3:.3f} n lambda_bar^3; atoms = {natoms}")
 
-    sigma = MarkovianSigmaMatrixForV(model)
+    sigma = VMediumSelfEnergyMatrix(model)
     eigs = np.linalg.eigvals(sigma.sigma / (HBAR * atom.gamma))
     eigs = np.sort(np.imag(eigs))
     # Vacuum decay is included in the resolvent, not in sigma.sigma.

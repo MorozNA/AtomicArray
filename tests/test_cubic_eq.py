@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import numpy as np
-from src.radiative_shift import find_kd
+from src.radiative_shift import find_reference_detuning
 from src.radiative_shift.tools.cubic_equation import solve_cubic
 
 
@@ -59,7 +59,7 @@ pr_d = np.pi * ro * (2 + n ** 2) / (1 - n ** 2)
 pr_d1 = np.pi * (2 + n1 ** 2) / (1 - n1 ** 2)
 pr_d2 = np.pi * (2 + n2 ** 2) / (1 - n2 ** 2)
 
-k_del = find_kd(n_refr, n0)
+k_del = find_reference_detuning(n_refr, n0)
 roots = solve_cubic(1j / 2, alpha * np.pi * ro + k_del,
                     -1j / 2, alpha * 2 * np.pi * ro - k_del)
 np.testing.assert_allclose(np.real(roots[0] ** 2), n_refr ** 2, atol=0.01)
